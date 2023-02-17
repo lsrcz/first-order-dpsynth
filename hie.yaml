@@ -1,0 +1,34 @@
+cradle:
+  stack:
+    - path: "./lib"
+      component: "first-order-dpsynth:lib"
+
+    - path: "./assem/Main.hs"
+      component: "first-order-dpsynth:exe:assem"
+
+    - path: "./assem/Paths_first_order_dpsynth.hs"
+      component: "first-order-dpsynth:exe:assem"
+
+    - path: "./mas/Main.hs"
+      component: "first-order-dpsynth:exe:mas"
+
+    - path: "./mas/Paths_first_order_dpsynth.hs"
+      component: "first-order-dpsynth:exe:mas"
+
+    - path: "./mis/Main.hs"
+      component: "first-order-dpsynth:exe:mis"
+
+    - path: "./mis/Paths_first_order_dpsynth.hs"
+      component: "first-order-dpsynth:exe:mis"
+
+    - path: "./mmm/Main.hs"
+      component: "first-order-dpsynth:exe:mmm"
+
+    - path: "./mmm/Paths_first_order_dpsynth.hs"
+      component: "first-order-dpsynth:exe:mmm"
+
+    - path: "./mss/Main.hs"
+      component: "first-order-dpsynth:exe:mss"
+
+    - path: "./mss/Paths_first_order_dpsynth.hs"
+      component: "first-order-dpsynth:exe:mss"

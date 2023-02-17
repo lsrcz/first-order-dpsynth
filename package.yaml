@@ -1,0 +1,101 @@
+name: first-order-dpsynth
+version: 0.1.0.0
+synopsis: Reimplementation of 'Synthesis of First-Order Dynamic Programming Algorithms'
+description: Reimplementation of 'Synthesis of First-Order Dynamic Programming Algorithms'
+author: "Sirui Lu"
+maintainer: Sirui Lu (siruilu@cs.washington.edu)
+license: BSD3
+license-file: LICENSE
+github: lsrcz/first-order-dpsynth
+copyright: "2023 Sirui Lu"
+
+dependencies:
+- base > 4.14 && < 5
+- grisette >= 0.1 && < 0.2
+- mtl >= 2.2.2
+- transformers >= 0.5.6.2
+- bytestring
+- unordered-containers
+- hashable
+- clock
+- deepseq
+- parallel
+- monad-par
+- pretty-simple
+- QuickCheck
+
+default-extensions:
+- BangPatterns
+- ConstraintKinds
+- DataKinds
+- DefaultSignatures
+- DeriveGeneric
+- DeriveAnyClass
+- DeriveLift
+- DerivingStrategies
+- DerivingVia
+- FlexibleContexts
+- FlexibleInstances
+- FunctionalDependencies
+- GADTs
+- InstanceSigs
+- KindSignatures
+- LambdaCase
+- MultiParamTypeClasses
+- OverloadedStrings
+- PatternSynonyms
+- RankNTypes
+- ScopedTypeVariables
+- TemplateHaskell
+- TupleSections
+- TypeApplications
+- TypeFamilies
+- TypeOperators
+- ViewPatterns
+- StandaloneDeriving
+
+flags: {
+  fast: {
+    description: "Compile with O2 optimization",
+    manual: False,
+    default: True,
+  }
+}
+
+when:
+  - condition: flag(fast)
+    then:
+      ghc-options: -O2
+    else:
+      ghc-options: -O0
+
+ghc-options: -Wall -ferror-spans -eventlog -threaded -rtsopts
+
+library:
+  source-dirs: lib
+
+executables:
+  mis:
+    source-dirs: mis
+    main: Main.hs
+    dependencies: first-order-dpsynth
+
+  mmm:
+    source-dirs: mmm
+    main: Main.hs
+    dependencies: first-order-dpsynth
+
+  assem:
+    source-dirs: assem
+    main: Main.hs
+    dependencies: first-order-dpsynth
+
+  mas:
+    source-dirs: mas
+    main: Main.hs
+    dependencies: first-order-dpsynth
+
+  mss:
+    source-dirs: mss
+    main: Main.hs
+    dependencies: first-order-dpsynth

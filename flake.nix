@@ -19,7 +19,7 @@
           hPkgs.cabal-install
           stack-wrapped
           pkgs.zlib # External C library needed by some Haskell packages
-          pkgs.boolector
+          boolector1
           pkgs.z3
         ];
         # Wrap Stack to work with our Nix integration. We don't want to modify
@@ -40,6 +40,15 @@
               "
           '';
         };
+
+        boolector1 = pkgs.boolector.overrideAttrs (finalAttrs: previousAttrs: {
+          buildInputs = [ pkgs.cadical pkgs.btor2tools pkgs.gmp ];
+          cmakeFlags =
+            [ "-DBUILD_SHARED_LIBS=ON"
+              "-DUSE_CADICAL=YES"
+              "-DUSE_GMP=YES"
+            ];
+        });
       in {
         devShells.default = pkgs.mkShell {
           buildInputs = myDevTools;

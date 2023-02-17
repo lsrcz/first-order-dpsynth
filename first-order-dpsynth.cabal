@@ -1,0 +1,375 @@
+cabal-version: 1.12
+
+-- This file has been generated from package.yaml by hpack version 0.35.1.
+--
+-- see: https://github.com/sol/hpack
+
+name:           first-order-dpsynth
+version:        0.1.0.0
+synopsis:       Reimplementation of 'Synthesis of First-Order Dynamic Programming Algorithms'
+description:    Reimplementation of 'Synthesis of First-Order Dynamic Programming Algorithms'
+homepage:       https://github.com/lsrcz/first-order-dpsynth#readme
+bug-reports:    https://github.com/lsrcz/first-order-dpsynth/issues
+author:         Sirui Lu
+maintainer:     Sirui Lu (siruilu@cs.washington.edu)
+copyright:      2023 Sirui Lu
+license:        BSD3
+license-file:   LICENSE
+build-type:     Simple
+
+source-repository head
+  type: git
+  location: https://github.com/lsrcz/first-order-dpsynth
+
+flag fast
+  description: Compile with O2 optimization
+  manual: False
+  default: True
+
+library
+  exposed-modules:
+      Core
+      Gen
+      Interpreter
+      Ops
+      Query
+      Spec
+      Timing
+  other-modules:
+      Paths_first_order_dpsynth
+  hs-source-dirs:
+      lib
+  default-extensions:
+      BangPatterns
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveGeneric
+      DeriveAnyClass
+      DeriveLift
+      DerivingStrategies
+      DerivingVia
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      InstanceSigs
+      KindSignatures
+      LambdaCase
+      MultiParamTypeClasses
+      OverloadedStrings
+      PatternSynonyms
+      RankNTypes
+      ScopedTypeVariables
+      TemplateHaskell
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      StandaloneDeriving
+  ghc-options: -Wall -ferror-spans -eventlog -threaded -rtsopts
+  build-depends:
+      QuickCheck
+    , base >4.14 && <5
+    , bytestring
+    , clock
+    , deepseq
+    , grisette ==0.1.*
+    , hashable
+    , monad-par
+    , mtl >=2.2.2
+    , parallel
+    , pretty-simple
+    , transformers >=0.5.6.2
+    , unordered-containers
+  default-language: Haskell2010
+  if flag(fast)
+    ghc-options: -O2
+  else
+    ghc-options: -O0
+
+executable assem
+  main-is: Main.hs
+  other-modules:
+      Paths_first_order_dpsynth
+  hs-source-dirs:
+      assem
+  default-extensions:
+      BangPatterns
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveGeneric
+      DeriveAnyClass
+      DeriveLift
+      DerivingStrategies
+      DerivingVia
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      InstanceSigs
+      KindSignatures
+      LambdaCase
+      MultiParamTypeClasses
+      OverloadedStrings
+      PatternSynonyms
+      RankNTypes
+      ScopedTypeVariables
+      TemplateHaskell
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      StandaloneDeriving
+  ghc-options: -Wall -ferror-spans -eventlog -threaded -rtsopts
+  build-depends:
+      QuickCheck
+    , base >4.14 && <5
+    , bytestring
+    , clock
+    , deepseq
+    , first-order-dpsynth
+    , grisette ==0.1.*
+    , hashable
+    , monad-par
+    , mtl >=2.2.2
+    , parallel
+    , pretty-simple
+    , transformers >=0.5.6.2
+    , unordered-containers
+  default-language: Haskell2010
+  if flag(fast)
+    ghc-options: -O2
+  else
+    ghc-options: -O0
+
+executable mas
+  main-is: Main.hs
+  other-modules:
+      Paths_first_order_dpsynth
+  hs-source-dirs:
+      mas
+  default-extensions:
+      BangPatterns
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveGeneric
+      DeriveAnyClass
+      DeriveLift
+      DerivingStrategies
+      DerivingVia
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      InstanceSigs
+      KindSignatures
+      LambdaCase
+      MultiParamTypeClasses
+      OverloadedStrings
+      PatternSynonyms
+      RankNTypes
+      ScopedTypeVariables
+      TemplateHaskell
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      StandaloneDeriving
+  ghc-options: -Wall -ferror-spans -eventlog -threaded -rtsopts
+  build-depends:
+      QuickCheck
+    , base >4.14 && <5
+    , bytestring
+    , clock
+    , deepseq
+    , first-order-dpsynth
+    , grisette ==0.1.*
+    , hashable
+    , monad-par
+    , mtl >=2.2.2
+    , parallel
+    , pretty-simple
+    , transformers >=0.5.6.2
+    , unordered-containers
+  default-language: Haskell2010
+  if flag(fast)
+    ghc-options: -O2
+  else
+    ghc-options: -O0
+
+executable mis
+  main-is: Main.hs
+  other-modules:
+      Paths_first_order_dpsynth
+  hs-source-dirs:
+      mis
+  default-extensions:
+      BangPatterns
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveGeneric
+      DeriveAnyClass
+      DeriveLift
+      DerivingStrategies
+      DerivingVia
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      InstanceSigs
+      KindSignatures
+      LambdaCase
+      MultiParamTypeClasses
+      OverloadedStrings
+      PatternSynonyms
+      RankNTypes
+      ScopedTypeVariables
+      TemplateHaskell
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      StandaloneDeriving
+  ghc-options: -Wall -ferror-spans -eventlog -threaded -rtsopts
+  build-depends:
+      QuickCheck
+    , base >4.14 && <5
+    , bytestring
+    , clock
+    , deepseq
+    , first-order-dpsynth
+    , grisette ==0.1.*
+    , hashable
+    , monad-par
+    , mtl >=2.2.2
+    , parallel
+    , pretty-simple
+    , transformers >=0.5.6.2
+    , unordered-containers
+  default-language: Haskell2010
+  if flag(fast)
+    ghc-options: -O2
+  else
+    ghc-options: -O0
+
+executable mmm
+  main-is: Main.hs
+  other-modules:
+      Paths_first_order_dpsynth
+  hs-source-dirs:
+      mmm
+  default-extensions:
+      BangPatterns
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveGeneric
+      DeriveAnyClass
+      DeriveLift
+      DerivingStrategies
+      DerivingVia
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      InstanceSigs
+      KindSignatures
+      LambdaCase
+      MultiParamTypeClasses
+      OverloadedStrings
+      PatternSynonyms
+      RankNTypes
+      ScopedTypeVariables
+      TemplateHaskell
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      StandaloneDeriving
+  ghc-options: -Wall -ferror-spans -eventlog -threaded -rtsopts
+  build-depends:
+      QuickCheck
+    , base >4.14 && <5
+    , bytestring
+    , clock
+    , deepseq
+    , first-order-dpsynth
+    , grisette ==0.1.*
+    , hashable
+    , monad-par
+    , mtl >=2.2.2
+    , parallel
+    , pretty-simple
+    , transformers >=0.5.6.2
+    , unordered-containers
+  default-language: Haskell2010
+  if flag(fast)
+    ghc-options: -O2
+  else
+    ghc-options: -O0
+
+executable mss
+  main-is: Main.hs
+  other-modules:
+      Paths_first_order_dpsynth
+  hs-source-dirs:
+      mss
+  default-extensions:
+      BangPatterns
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveGeneric
+      DeriveAnyClass
+      DeriveLift
+      DerivingStrategies
+      DerivingVia
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      InstanceSigs
+      KindSignatures
+      LambdaCase
+      MultiParamTypeClasses
+      OverloadedStrings
+      PatternSynonyms
+      RankNTypes
+      ScopedTypeVariables
+      TemplateHaskell
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      StandaloneDeriving
+  ghc-options: -Wall -ferror-spans -eventlog -threaded -rtsopts
+  build-depends:
+      QuickCheck
+    , base >4.14 && <5
+    , bytestring
+    , clock
+    , deepseq
+    , first-order-dpsynth
+    , grisette ==0.1.*
+    , hashable
+    , monad-par
+    , mtl >=2.2.2
+    , parallel
+    , pretty-simple
+    , transformers >=0.5.6.2
+    , unordered-containers
+  default-language: Haskell2010
+  if flag(fast)
+    ghc-options: -O2
+  else
+    ghc-options: -O0
