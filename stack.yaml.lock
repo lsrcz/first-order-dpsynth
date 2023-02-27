@@ -3,18 +3,7 @@
 # For more information, please see the documentation at:
 #   https://docs.haskellstack.org/en/stable/lock_files
 
-packages:
-- completed:
-    commit: 03fae8464d761562eec68c5db9fd0addb54cda6d
-    git: https://github.com/lsrcz/grisette.git
-    name: grisette
-    pantry-tree:
-      sha256: 1f5be427bd950e9f73157a40eeb34dcbd58bc562796fb05e3d8018df17269b1e
-      size: 11935
-    version: 0.1.0.0
-  original:
-    commit: 03fae8464d761562eec68c5db9fd0addb54cda6d
-    git: https://github.com/lsrcz/grisette.git
+packages: []
 snapshots:
 - completed:
     sha256: 6d1532d40621957a25bad5195bfca7938e8a06d923c91bc52aa0f3c41181f2d4

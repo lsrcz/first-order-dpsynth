@@ -84,10 +84,10 @@ apply ([x] : xs) (1 : ys) = x + apply xs ys
 apply ([x] : xs) (-1 : ys) = apply xs ys - x
 apply _ _ = undefined
 
-masSpec :: forall a. (Num a, SOrd a, SimpleMergeable a, SafeLinearArith a) => [[a]] -> ExceptT VerificationConditions UnionM a
+masSpec :: forall a e. (Num a, SOrd a, SimpleMergeable a, SafeLinearArith e a) => [[a]] -> ExceptT VerificationConditions UnionM a
 masSpec = spec apply allBitStrings
 
-masSpecV :: forall a. (Num a, SOrd a, SimpleMergeable a, SafeLinearArith a) => [[a]] -> a -> ExceptT VerificationConditions UnionM SymBool
+masSpecV :: forall a e. (Num a, SOrd a, SimpleMergeable a, SafeLinearArith e a) => [[a]] -> a -> ExceptT VerificationConditions UnionM SymBool
 masSpecV = specV apply allBitStrings
 
 cap :: (SOrd a, Num a) => [[a]] -> SymBool

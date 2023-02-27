@@ -65,27 +65,27 @@ apply ([x] : xs) (1 : ys) = x + apply xs ys
 apply ([x] : xs) (-1 : ys) = -x + apply xs ys
 apply _ _ = undefined
 
-safeApply :: (SimpleMergeable a, Num a, SafeLinearArith a) => [[a]] -> [Int] -> ExceptT VerificationConditions UnionM a
+safeApply :: (SimpleMergeable a, Num a, SafeLinearArith e a) => [[a]] -> [Int] -> ExceptT VerificationConditions UnionM a
 safeApply [] [] = mrgReturn 0
 safeApply (_ : xs) (0 : ys) = safeApply xs ys
 safeApply ([x] : xs) (1 : ys) = do
   a <- safeApply xs ys
-  safeAdd AssumptionViolation x a
+  safeAdd' (const AssumptionViolation) x a
 safeApply ([x] : xs) (-1 : ys) = do
   a <- safeApply xs ys
-  safeMinus AssumptionViolation a x
+  safeMinus' (const AssumptionViolation) a x
 safeApply _ _ = undefined
 
-mmmSpecV :: forall a. (Num a, SOrd a, SimpleMergeable a, SafeLinearArith a) => [[a]] -> a -> ExceptT VerificationConditions UnionM SymBool
+mmmSpecV :: forall a e. (Num a, SOrd a, SimpleMergeable a, SafeLinearArith e a) => [[a]] -> a -> ExceptT VerificationConditions UnionM SymBool
 mmmSpecV = specV apply allBitStrings
 
-safeMmmSpecV :: forall a. (Num a, SOrd a, SimpleMergeable a, SafeLinearArith a) => [[a]] -> a -> ExceptT VerificationConditions UnionM SymBool
+safeMmmSpecV :: forall a e. (Num a, SOrd a, SimpleMergeable a, SafeLinearArith e a) => [[a]] -> a -> ExceptT VerificationConditions UnionM SymBool
 safeMmmSpecV = safeSpecV safeApply allBitStrings
 
-mmmSpec :: forall a. (Num a, SOrd a, SimpleMergeable a, SafeLinearArith a) => [[a]] -> ExceptT VerificationConditions UnionM a
+mmmSpec :: forall a e. (Num a, SOrd a, SimpleMergeable a, SafeLinearArith e a) => [[a]] -> ExceptT VerificationConditions UnionM a
 mmmSpec = spec apply allBitStrings
 
-safeMmmSpec :: forall a. (Num a, SOrd a, SimpleMergeable a, SafeLinearArith a) => [[a]] -> ExceptT VerificationConditions UnionM a
+safeMmmSpec :: forall a e. (Num a, SOrd a, SimpleMergeable a, SafeLinearArith e a) => [[a]] -> ExceptT VerificationConditions UnionM a
 safeMmmSpec = safeSpec safeApply allBitStrings
 
 cap :: (SOrd a, Num a) => [[a]] -> SymBool

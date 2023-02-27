@@ -5,8 +5,8 @@ import Data.Foldable
 import Grisette
 
 specV ::
-  forall a.
-  (Num a, SOrd a, SimpleMergeable a, SafeLinearArith a) =>
+  forall a e.
+  (Num a, SOrd a, SimpleMergeable a, SafeLinearArith e a) =>
   ([[a]] -> [Int] -> a) ->
   (Int -> [[Int]]) ->
   [[a]] ->
@@ -20,8 +20,8 @@ specV apply allBitStrings inputs v =
     t = map (apply inputs) (allBitStrings (length inputs))
 
 safeSpecV ::
-  forall a.
-  (Num a, SOrd a, SimpleMergeable a, SafeLinearArith a) =>
+  forall a e.
+  (Num a, SOrd a, SimpleMergeable a, SafeLinearArith e a) =>
   ([[a]] -> [Int] -> ExceptT VerificationConditions UnionM a) ->
   (Int -> [[Int]]) ->
   [[a]] ->
@@ -36,8 +36,8 @@ safeSpecV safeApply allBitStrings inputs v = do
     t = mrgTraverse (safeApply inputs) (allBitStrings (length inputs))
 
 spec ::
-  forall a.
-  (Num a, SOrd a, SimpleMergeable a, SafeLinearArith a) =>
+  forall a e.
+  (Num a, SOrd a, SimpleMergeable a, SafeLinearArith e a) =>
   ([[a]] -> [Int] -> a) ->
   (Int -> [[Int]]) ->
   [[a]] ->
@@ -53,8 +53,8 @@ spec apply allBitStrings inputs =
       (allBitStrings (length inputs))
 
 safeSpec ::
-  forall a.
-  (Num a, SOrd a, SimpleMergeable a, SafeLinearArith a) =>
+  forall a e.
+  (Num a, SOrd a, SimpleMergeable a, SafeLinearArith e a) =>
   ([[a]] -> [Int] -> ExceptT VerificationConditions UnionM a) ->
   (Int -> [[Int]]) ->
   [[a]] ->

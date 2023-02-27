@@ -61,10 +61,10 @@ apply (_ : xs) (0 : ys) = apply xs ys
 apply ([x] : xs) (1 : ys) = x + apply xs ys
 apply _ _ = undefined
 
-mssSpec :: forall a. (Num a, SOrd a, SimpleMergeable a, SafeLinearArith a) => [[a]] -> ExceptT VerificationConditions UnionM a
+mssSpec :: forall a e. (Num a, SOrd a, SimpleMergeable a, SafeLinearArith e a) => [[a]] -> ExceptT VerificationConditions UnionM a
 mssSpec = spec apply allBitStrings
 
-mssSpecV :: forall a. (Num a, SOrd a, SimpleMergeable a, SafeLinearArith a) => [[a]] -> a -> ExceptT VerificationConditions UnionM SymBool
+mssSpecV :: forall a e. (Num a, SOrd a, SimpleMergeable a, SafeLinearArith e a) => [[a]] -> a -> ExceptT VerificationConditions UnionM SymBool
 mssSpecV = specV apply allBitStrings
 
 main :: IO ()

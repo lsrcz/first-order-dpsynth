@@ -79,7 +79,7 @@ apply ([_, _, stay2, _] : xs) (Stay2 : ys) = stay2 + apply xs ys
 apply ([_, _, _, switch2] : xs) (Switch2 : ys) = switch2 + apply xs ys
 apply _ _ = undefined
 
-assemSpec :: forall a. (Show a, Num a, SOrd a, SimpleMergeable a, SafeLinearArith a) => [[a]] -> ExceptT VerificationConditions UnionM a
+assemSpec :: forall a e. (Show a, Num a, SOrd a, SimpleMergeable a, SafeLinearArith e a) => [[a]] -> ExceptT VerificationConditions UnionM a
 assemSpec inputs =
   mrgReturn $ trav (sort $ allSpec (length inputs) 1 ++ allSpec (length inputs) 2)
   where
@@ -87,7 +87,7 @@ assemSpec inputs =
     trav [v] = apply inputs v
     trav (v : vs) = let a = apply inputs v; acc = trav vs in mrgIte (a <=~ acc) a acc
 
-assemSpecV :: forall a. (Show a, Num a, SOrd a, SimpleMergeable a, SafeLinearArith a) => [[a]] -> a -> ExceptT VerificationConditions UnionM SymBool
+assemSpecV :: forall a e. (Show a, Num a, SOrd a, SimpleMergeable a, SafeLinearArith e a) => [[a]] -> a -> ExceptT VerificationConditions UnionM SymBool
 assemSpecV inputs v =
   mrgReturn $
     foldl' (\acc x -> acc &&~ v <=~ x) (con True) t

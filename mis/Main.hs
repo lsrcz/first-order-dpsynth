@@ -55,24 +55,24 @@ apply (_ : xs) (0 : ys) = apply xs ys
 apply ([x] : xs) (1 : ys) = x + apply xs ys
 apply _ _ = undefined
 
-safeApply :: (Num a, Mergeable a, SafeLinearArith a) => [[a]] -> [Int] -> ExceptT VerificationConditions UnionM a
+safeApply :: (Num a, Mergeable a, SafeLinearArith e a) => [[a]] -> [Int] -> ExceptT VerificationConditions UnionM a
 safeApply [] [] = mrgReturn 0
 safeApply (_ : xs) (0 : ys) = safeApply xs ys
 safeApply ([x] : xs) (1 : ys) = do
   a <- safeApply xs ys
-  safeAdd AssumptionViolation x a
+  safeAdd' (const AssumptionViolation) x a
 safeApply _ _ = undefined
 
-misSpec :: forall a. (Num a, SOrd a, SimpleMergeable a, SafeLinearArith a) => [[a]] -> ExceptT VerificationConditions UnionM a
+misSpec :: forall a e. (Num a, SOrd a, SimpleMergeable a, SafeLinearArith e a) => [[a]] -> ExceptT VerificationConditions UnionM a
 misSpec = spec apply allBitStrings
 
-safeMisSpec :: forall a. (Num a, SOrd a, SimpleMergeable a, SafeLinearArith a) => [[a]] -> ExceptT VerificationConditions UnionM a
+safeMisSpec :: forall a e. (Num a, SOrd a, SimpleMergeable a, SafeLinearArith e a) => [[a]] -> ExceptT VerificationConditions UnionM a
 safeMisSpec = safeSpec safeApply allBitStrings
 
-misSpecV :: forall a. (Num a, SOrd a, SimpleMergeable a, SafeLinearArith a) => [[a]] -> a -> ExceptT VerificationConditions UnionM SymBool
+misSpecV :: forall a e. (Num a, SOrd a, SimpleMergeable a, SafeLinearArith e a) => [[a]] -> a -> ExceptT VerificationConditions UnionM SymBool
 misSpecV = specV apply allBitStrings
 
-safeMisSpecV :: forall a. (Num a, SOrd a, SimpleMergeable a, SafeLinearArith a) => [[a]] -> a -> ExceptT VerificationConditions UnionM SymBool
+safeMisSpecV :: forall a e. (Num a, SOrd a, SimpleMergeable a, SafeLinearArith e a) => [[a]] -> a -> ExceptT VerificationConditions UnionM SymBool
 safeMisSpecV = safeSpecV safeApply allBitStrings
 
 main :: IO ()
