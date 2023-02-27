@@ -9,6 +9,12 @@ cradle:
     - path: "./assem/Paths_first_order_dpsynth.hs"
       component: "first-order-dpsynth:exe:assem"
 
+    - path: "./component/Main.hs"
+      component: "first-order-dpsynth:exe:component"
+
+    - path: "./component/Paths_first_order_dpsynth.hs"
+      component: "first-order-dpsynth:exe:component"
+
     - path: "./mas/Main.hs"
       component: "first-order-dpsynth:exe:mas"
 

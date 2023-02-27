@@ -23,6 +23,8 @@ dependencies:
 - monad-par
 - pretty-simple
 - QuickCheck
+- sbv
+- template-haskell
 
 default-extensions:
 - BangPatterns
@@ -99,3 +101,9 @@ executables:
     source-dirs: mss
     main: Main.hs
     dependencies: first-order-dpsynth
+
+  component:
+    source-dirs: component
+    main: Main.hs
+    dependencies: first-order-dpsynth
+
