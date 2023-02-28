@@ -27,6 +27,12 @@ cradle:
     - path: "./mmm/Paths_first_order_dpsynth.hs"
       component: "first-order-dpsynth:exe:mmm"
 
+    - path: "./mmmt/Main.hs"
+      component: "first-order-dpsynth:exe:mmmt"
+
+    - path: "./mmmt/Paths_first_order_dpsynth.hs"
+      component: "first-order-dpsynth:exe:mmmt"
+
     - path: "./mss/Main.hs"
       component: "first-order-dpsynth:exe:mss"
 

@@ -85,6 +85,11 @@ executables:
     main: Main.hs
     dependencies: first-order-dpsynth
 
+  mmmt:
+    source-dirs: mmmt
+    main: Main.hs
+    dependencies: first-order-dpsynth
+
   assem:
     source-dirs: assem
     main: Main.hs
