@@ -1,26 +1,26 @@
 module Main where
 
+import Component.CEGIS
+import Component.ConcreteMiniProg
+import Component.ConcreteProg
+import Component.MiniProg
+import Component.Ops
+import Component.Prog
 import Control.Monad
 import Control.Monad.Except
+import Control.Monad.Trans.Writer
 import Core
+import Data.Bifunctor
+import Data.List
 import Data.Proxy
+import Debug.Trace
 import Gen
 import Grisette
 import Ops
 import Query
 import Spec
-import Timing
-import Component.ConcreteProg
-import Component.ConcreteMiniProg
-import Component.CEGIS
-import Component.Ops
 import Test.QuickCheck
-import Component.Prog
-import Component.MiniProg
-import Control.Monad.Trans.Writer
-import Data.Bifunctor
-import Debug.Trace
-import Data.List
+import Timing
 
 mis :: (Num a) => ConProgram a
 mis =
@@ -90,31 +90,34 @@ safeMisSpecV = safeSpecV safeApply allBitStrings
 
 misComponentCProg :: Num a => CProg a
 misComponentCProg =
-  CProg [0, 0] [
-    CMiniProg [CNode "+" 0 [CInput 0, CInput 2]] 0,
-    CMiniProg [CNode "max" 0 [CInput 1, CInput 2]] 0
-   ]
-   (CMiniProg [CNode "max" 0 [CInput 0, CInput 1]] 0)
+  CProg
+    [0, 0]
+    [ CMiniProg [CNode "+" 0 [CInput 0, CInput 2]] 0,
+      CMiniProg [CNode "max" 0 [CInput 1, CInput 2]] 0
+    ]
+    (CMiniProg [CNode "max" 0 [CInput 0, CInput 1]] 0)
 
 misComponentProgSpec :: ProgSpec
-misComponentProgSpec = ProgSpec
-  [MiniProgSpec [ComponentSpec "+" 2] 3,
-   MiniProgSpec [ComponentSpec "max" 2] 3]
-   (MiniProgSpec [ComponentSpec "max" 2] 2)
+misComponentProgSpec =
+  ProgSpec
+    [ MiniProgSpec [ComponentSpec "+" 2] 3,
+      MiniProgSpec [ComponentSpec "max" 2] 3
+    ]
+    (MiniProgSpec [ComponentSpec "max" 2] 2)
 
 misComponentProg :: (GenSymSimple () a, Num a) => Prog a
 misComponentProg = genSymSimple ((), misComponentProgSpec) "prog"
 
 misComponentProgSpec1 :: ProgSpec
-misComponentProgSpec1 = ProgSpec
-  [MiniProgSpec [ComponentSpec "+" 2, ComponentSpec "-" 2] 3,
-   MiniProgSpec [ComponentSpec "max" 2, ComponentSpec "min" 2] 3]
-   (MiniProgSpec [ComponentSpec "max" 2] 2)
+misComponentProgSpec1 =
+  ProgSpec
+    [ MiniProgSpec [ComponentSpec "+" 2, ComponentSpec "+" 2] 3,
+      MiniProgSpec [ComponentSpec "max" 2, ComponentSpec "max" 2] 3
+    ]
+    (MiniProgSpec [ComponentSpec "max" 2] 2)
 
 misComponentProg1 :: (GenSymSimple () a, Num a) => Prog a
 misComponentProg1 = genSymSimple ((), misComponentProgSpec1) "prog"
-
-
 
 {-
 misComponentProg :: Num a => Prog a
@@ -135,12 +138,12 @@ c :: SymInteger
 c = "c"
 
 gen :: M SymInteger
-gen = do
-  f :: SymInteger =~> SymInteger =~> SymInteger =~> SymInteger <- simpleFresh ()
-  mrgReturn (f # "a" # "b" # "c")
+gen = simpleFresh () {-do
+                     f :: SymInteger =~> SymInteger =~> SymInteger =~> SymInteger <- simpleFresh ()
+                     mrgReturn (f # "a" # "b" # "c")-}
 
 input :: [SymInteger]
-input = [a,b,c]
+input = [a, b, c]
 
 ok :: SymInteger -> SymBool
 ok i = simpleMerge $ do
@@ -153,7 +156,6 @@ int = simpleMerge $ fmap (first mrgReturn) $ runWriterT $ runExceptT $ runFreshT
 
 i1 :: UnionM (Either VerificationConditions SymInteger)
 i1 = fst int
-
 
 rfSpec :: forall a e. (Show a, Num a, SOrd a, SimpleMergeable a, SafeLinearArith e a) => [[a]] -> ExceptT VerificationConditions UnionM a
 rfSpec = misSpec . transpose
@@ -169,17 +171,23 @@ main = do
   let x = evaluateSymToCon r (misComponentProg1 :: Prog SymInteger) :: CProg Integer
   print x
 
-  quickCheck (\(l :: [Integer]) -> (interpretCProg [toSym l] (x :: CProg Integer) funcMap :: ExceptT VerificationConditions UnionM SymInteger) ==
-    mrgReturn (toSym $ misAlgo l :: SymInteger))
+  quickCheck
+    ( \(l :: [Integer]) ->
+        (interpretCProg [toSym l] (x :: CProg Integer) funcMap :: ExceptT VerificationConditions UnionM SymInteger)
+          == mrgReturn (toSym $ misAlgo l :: SymInteger)
+    )
 
   print (misComponentProg :: Prog SymInteger)
 
-  quickCheck (\(l :: [Integer]) -> (interpretCProg [toSym l] (misComponentCProg :: CProg Integer) funcMap :: ExceptT VerificationConditions UnionM SymInteger) ==
-    mrgReturn (toSym $ misAlgo l :: SymInteger))
+  quickCheck
+    ( \(l :: [Integer]) ->
+        (interpretCProg [toSym l] (misComponentCProg :: CProg Integer) funcMap :: ExceptT VerificationConditions UnionM SymInteger)
+          == mrgReturn (toSym $ misAlgo l :: SymInteger)
+    )
 
-  let x :: ExceptT VerificationConditions UnionM SymInteger = interpretCProg [[1,3,-4,5,-6,7]] (misComponentCProg :: CProg Integer) funcMap
+  let x :: ExceptT VerificationConditions UnionM SymInteger = interpretCProg [[1, 3, -4, 5, -6, 7]] (misComponentCProg :: CProg Integer) funcMap
   print x
-  print (misAlgo [1,3,-4,5,-6,7] :: Integer)
+  print (misAlgo [1, 3, -4, 5, -6, 7] :: Integer)
 
   misIntSynthedExtV :: Maybe (ConProgram Integer) <-
     timeItAll "misextV" $ synth1V config availableUnary availableBinary () (const $ con True) (misSpecV @SymInteger) (misSketchExt (Proxy @Integer))

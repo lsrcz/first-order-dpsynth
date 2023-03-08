@@ -1,15 +1,12 @@
-{-# LANGUAGE DeriveLift #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-
 module Component.ConcreteMiniProg where
-import qualified Data.ByteString as B
+
 import Component.MiniProg
+import Control.Monad.Except
+import qualified Data.ByteString as B
+import qualified Data.HashMap.Strict as M
+import Data.List (sortBy)
 import GHC.Generics
 import Grisette
-import Data.List (sortBy)
-import qualified Data.HashMap.Strict as M
-import Control.Monad.Except
-
 
 data CVal
   = CInternal Int
@@ -21,7 +18,7 @@ data CNode = CNode B.ByteString Int [CVal]
   deriving (Generic, Show)
   deriving (ToCon Node) via (Default CNode)
 
-data CMiniProg = CMiniProg { cnodes :: [CNode], output :: Int }
+data CMiniProg = CMiniProg {cnodes :: [CNode], output :: Int}
   deriving (Generic, Show)
   deriving (ToCon MiniProg) via (Default CMiniProg)
 
@@ -34,6 +31,6 @@ interpretCMiniProg inputs (CMiniProg ns o) fm = go [] s
     getNodeInputValue _ (CInput i) = inputs !! i
     getNodeInputValue reg (CInternal i) = reg !! i
     go reg [] = mrgReturn $ reg !! oidx
-    go reg (CNode op _ nodeInputs:xs) = do
+    go reg (CNode op _ nodeInputs : xs) = do
       r <- case fm M.! op of Func f -> f $ getNodeInputValue reg <$> nodeInputs
       go (reg ++ [r]) xs

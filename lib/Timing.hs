@@ -1,5 +1,6 @@
 module Timing where
 
+import Control.Monad.IO.Class
 import System.Clock
 import Text.Printf
 
@@ -9,13 +10,13 @@ diff (TimeSpec s1 n1) (TimeSpec s2 n2) = (a2 - a1) / (fromIntegral (10 ^ (9 :: I
     a1 = (fromIntegral s1 * 10 ^ (9 :: Integer)) + fromIntegral n1
     a2 = (fromIntegral s2 * 10 ^ (9 :: Integer)) + fromIntegral n2
 
-timeItAll :: String -> IO a -> IO a
+timeItAll :: (MonadIO m) => String -> m a -> m a
 timeItAll str x = do
-  startMono <- getTime Monotonic
-  startProcessCPU <- getTime ProcessCPUTime
+  startMono <- liftIO $ getTime Monotonic
+  startProcessCPU <- liftIO $ getTime ProcessCPUTime
   r <- x
-  endMono <- getTime Monotonic
-  endProcessCPU <- getTime ProcessCPUTime
-  printf "%s -- Mono clock: %.6fs\n" str (diff startMono endMono)
-  printf "%s -- CPU clock:  %.6fs\n" str (diff startProcessCPU endProcessCPU)
+  endMono <- liftIO $ getTime Monotonic
+  endProcessCPU <- liftIO $ getTime ProcessCPUTime
+  liftIO $ printf "%s -- Mono clock: %.6fs\n" str (diff startMono endMono)
+  liftIO $ printf "%s -- CPU clock:  %.6fs\n" str (diff startProcessCPU endProcessCPU)
   return r

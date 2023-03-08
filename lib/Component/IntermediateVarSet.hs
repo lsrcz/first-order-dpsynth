@@ -1,6 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Component.IntermediateVarSet where
+
 import Grisette
 
 newtype IntermediateVarSet = IntermediateVarSet SymbolSet

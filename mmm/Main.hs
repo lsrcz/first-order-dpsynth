@@ -1,24 +1,26 @@
 module Main where
 
+import Component.CEGIS
+import Component.ConcreteMiniProg
+import Component.ConcreteProg
+import Component.MiniProg
+import Component.Ops
+import Component.Prog
+import Control.Exception (ArithException (DivideByZero), throw)
 import Control.Monad
 import Control.Monad.Except
 import Core
+import Data.List
 import Data.Proxy
+import qualified Data.Type.Coercion as Grisette
+import Debug.Trace
 import Gen
 import Grisette
 import Ops
 import Query
 import Spec
-import Timing
-import Component.ConcreteProg
-import Component.ConcreteMiniProg
 import Test.QuickCheck
-import Component.Ops
-import Component.Prog
-import Component.MiniProg
-import Component.CEGIS
-import Debug.Trace
-import Data.List
+import Timing
 
 mmm :: Num a => ConProgram a
 mmm =
@@ -104,37 +106,44 @@ cap = foldl (\acc y -> acc &&~ y >=~ -16 &&~ y <=~ 16) (con True) . join
 
 mmmComponentCProg :: Num a => CProg a
 mmmComponentCProg =
-  CProg [0, 0, 0] [
-    CMiniProg [
-      CNode "max" 0 [CInput 2, CInput 3]
-    ] 0,
-    CMiniProg [
-      CNode "+" 0 [CInput 0, CInput 1],
-      CNode "+" 1 [CInput 0, CInput 3],
-      CNode "max" 2 [CInternal 0, CInternal 1]
-    ] 2,
-    CMiniProg [
-      CNode "-" 0 [CInput 1, CInput 0],
-      CNode "-" 1 [CInput 2, CInput 0],
-      CNode "max" 2 [CInternal 0, CInternal 1]
-    ] 2
-  ]
-  (CMiniProg [
-    CNode "max" 0 [CInput 0, CInput 1],
-    CNode "max" 1 [CInput 2, CInternal 0]
-  ] 1)
+  CProg
+    [0, 0, 0]
+    [ CMiniProg
+        [ CNode "max" 0 [CInput 2, CInput 3]
+        ]
+        0,
+      CMiniProg
+        [ CNode "+" 0 [CInput 0, CInput 1],
+          CNode "+" 1 [CInput 0, CInput 3],
+          CNode "max" 2 [CInternal 0, CInternal 1]
+        ]
+        2,
+      CMiniProg
+        [ CNode "-" 0 [CInput 1, CInput 0],
+          CNode "-" 1 [CInput 2, CInput 0],
+          CNode "max" 2 [CInternal 0, CInternal 1]
+        ]
+        2
+    ]
+    ( CMiniProg
+        [ CNode "max" 0 [CInput 0, CInput 1],
+          CNode "max" 1 [CInput 2, CInternal 0]
+        ]
+        1
+    )
 
 mmmComponentProgSpec :: Num a => ProgSpecInit a
-mmmComponentProgSpec = ProgSpecInit
-  [0,0,0]
-  [MiniProgSpec [ComponentSpec "max" 2] 4,
-   MiniProgSpec [ComponentSpec "max" 2, ComponentSpec "+" 2, ComponentSpec "+" 2] 4,
-   MiniProgSpec [ComponentSpec "max" 2, ComponentSpec "-" 2, ComponentSpec "-" 2] 4]
-   (MiniProgSpec [ComponentSpec "max" 2, ComponentSpec "max" 2] 3)
+mmmComponentProgSpec =
+  ProgSpecInit
+    [0, 0, 0]
+    [ MiniProgSpec [ComponentSpec "max" 2] 4,
+      MiniProgSpec [ComponentSpec "max" 2, ComponentSpec "+" 2, ComponentSpec "+" 2] 4,
+      MiniProgSpec [ComponentSpec "max" 2, ComponentSpec "-" 2, ComponentSpec "-" 2] 4
+    ]
+    (MiniProgSpec [ComponentSpec "max" 2, ComponentSpec "max" 2] 3)
 
 mmmComponentProg1 :: forall a. (Num a) => Prog a
 mmmComponentProg1 = genSymSimple (mmmComponentProgSpec :: ProgSpecInit a) "prog"
-
 
 a :: SymInteger
 a = "a"
@@ -149,12 +158,12 @@ d :: SymInteger
 d = "d"
 
 gen :: M SymInteger
-gen = do
-  f :: SymInteger =~> SymInteger =~> SymInteger {-=~> SymInteger-} <- simpleFresh ()
-  mrgReturn (f # "a" # "b" {- "c"-})
+gen = simpleFresh () {-do
+                     f :: SymInteger =~> SymInteger =~> SymInteger =~> SymInteger <- simpleFresh ()
+                     mrgReturn (f # "a" # "b" # "c")-}
 
 input :: [SymInteger]
-input = [a,b{-,c-}]
+input = [a, b, c]
 
 ok :: SymInteger -> SymBool
 ok i = simpleMerge $ do
@@ -163,21 +172,30 @@ ok i = simpleMerge $ do
     Left vc -> con False
     Right sb -> return sb
 
-
 rfSpec :: forall a e. (Show a, Num a, SOrd a, SimpleMergeable a, SafeLinearArith e a) => [[a]] -> ExceptT VerificationConditions UnionM a
 rfSpec = mmmSpec . transpose
 
-
 main :: IO ()
 main = do
-  let config = precise z3
+  let config = precise z3 {Grisette.transcript = Just "a.smt2"}
 
+  Right (_, r) <- cegisCustomized' config rfSpec [input] mmmComponentProg1 funcMap gen
 
-  Right (_, r) <- cegisCustomized' (precise z3) rfSpec [input] mmmComponentProg1 funcMap gen
-  print (evaluateSymToCon r (mmmComponentProg1 :: Prog SymInteger) :: CProg SymInteger)
+  let x = evaluateSymToCon r (mmmComponentProg1 :: Prog SymInteger) :: CProg Integer
+  print x
+  quickCheck
+    ( \(l :: [Integer]) ->
+        (interpretCProg [toSym l] (x :: CProg Integer) funcMap :: ExceptT VerificationConditions UnionM SymInteger)
+          == mrgReturn (toSym $ mmmAlgo l :: SymInteger)
+    )
 
-  quickCheck (\(l :: [Integer]) -> (interpretCProg [toSym l] (mmmComponentCProg :: CProg Integer) funcMap :: ExceptT VerificationConditions UnionM SymInteger) ==
-    mrgReturn (toSym $ mmmAlgo l :: SymInteger))
+  throw DivideByZero
+
+  quickCheck
+    ( \(l :: [Integer]) ->
+        (interpretCProg [toSym l] (mmmComponentCProg :: CProg Integer) funcMap :: ExceptT VerificationConditions UnionM SymInteger)
+          == mrgReturn (toSym $ mmmAlgo l :: SymInteger)
+    )
 
   mmmIntSynthedExtV :: Maybe (ConProgram Integer) <-
     timeItAll "mmmextV" $ synth1V config availableUnary availableBinary () (const $ con True) (mmmSpecV @SymInteger) (mmmSketchExt (Proxy @Integer))

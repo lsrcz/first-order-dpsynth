@@ -1,29 +1,34 @@
 module Main where
 
-import Component.MiniProg
-import Grisette
-import Component.Ops
-import Data.Maybe
 import Component.CEGIS
 import Component.ConcreteMiniProg
+import Component.MiniProg
+import Component.Ops
+import Data.Maybe
+import Grisette
 
 progSpec1 :: MiniProgSpec
-progSpec1 = MiniProgSpec [
-  ComponentSpec "negate" 1,
-  ComponentSpec "+" 2,
-  ComponentSpec "+" 2,
-  ComponentSpec "max" 2] 3
+progSpec1 =
+  MiniProgSpec
+    [ ComponentSpec "negate" 1,
+      ComponentSpec "+" 2,
+      ComponentSpec "+" 2,
+      ComponentSpec "max" 2
+    ]
+    3
 
 prog1 :: MiniProg
 prog1 = genSymSimple progSpec1 "prog"
 
 prog2 :: MiniProg
-prog2 = MiniProg [
-  Node "negate" 0 [mrgReturn $ Input 1],
-  Node "+" 1 [mrgReturn $ Input 0, mrgReturn $ Internal 0],
-  Node "+" 2 [mrgReturn $ Input 0, mrgReturn $ Internal 1],
-  Node "max" 3 [mrgReturn $ Input 2, mrgReturn $ Internal 2]
-  ] 3
+prog2 =
+  MiniProg
+    [ Node "negate" 0 [mrgReturn $ Input 1],
+      Node "+" 1 [mrgReturn $ Input 0, mrgReturn $ Internal 0],
+      Node "+" 2 [mrgReturn $ Input 0, mrgReturn $ Internal 1],
+      Node "max" 3 [mrgReturn $ Input 2, mrgReturn $ Internal 2]
+    ]
+    3
 
 cprog2 :: CMiniProg
 cprog2 = fromJust $ toCon prog2
@@ -66,7 +71,6 @@ v = interpretMiniProg [a, b, c] prog2 funcMap gen2
 v1 :: (UnionM (Either VerificationConditions SymInteger), IntermediateVarSet)
 v1 = simpleMerge $ fmap (first mrgReturn) $ runWriterT $ runExceptT $ runFreshT v "ep"
 
-
 v1r1 :: ExceptT VerificationConditions UnionM ()
 v1r1 = do
   x <- ExceptT $ fst v1
@@ -78,9 +82,14 @@ v1i = snd v1
 
 main :: IO ()
 main = do
-
-  Right (_, r) <- cegisCustomized (precise z3) (\x -> x ==~ symMax (a + a - b) c)
-               [a,b,c] prog1 funcMap gen
+  Right (_, r) <-
+    cegisCustomized
+      (precise z3)
+      (\x -> x ==~ symMax (a + a - b) c)
+      [a, b, c]
+      prog1
+      funcMap
+      gen
   print r
   print $ evaluateSym False r prog1
 

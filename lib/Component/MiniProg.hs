@@ -14,12 +14,12 @@ data Val
   deriving (Generic, Show)
   deriving (Mergeable, SEq, EvaluateSym) via (Default Val)
 
-data ValSpec = ValSpec { valInternalNum :: Int, valInputNum :: Int }
+data ValSpec = ValSpec {valInternalNum :: Int, valInputNum :: Int}
 
 instance GenSym ValSpec Val where
   fresh (ValSpec int input) = do
-    intval <- chooseFresh [0..int-1]
-    inputval <- chooseFresh [0..input-1]
+    intval <- chooseFresh [0 .. int - 1]
+    inputval <- chooseFresh [0 .. input - 1]
     chooseFresh [Internal intval, Input inputval]
 
 data Node
@@ -34,21 +34,22 @@ data MiniProg = MiniProg {nodes :: [Node], output :: UnionM Int}
   deriving (Generic, Show)
   deriving (EvaluateSym, SEq) via (Default MiniProg)
 
-data ComponentSpec = ComponentSpec { componentOp :: B.ByteString, componentInput :: Int }
-data NodeSpec = NodeSpec { componentInfo :: ComponentSpec, globalInputNum :: Int, globalSlotNum :: Int }
+data ComponentSpec = ComponentSpec {componentOp :: B.ByteString, componentInput :: Int}
 
-data MiniProgSpec = MiniProgSpec { componentSpec :: [ComponentSpec], inputNum :: Int }
+data NodeSpec = NodeSpec {componentInfo :: ComponentSpec, globalInputNum :: Int, globalSlotNum :: Int}
+
+data MiniProgSpec = MiniProgSpec {componentSpec :: [ComponentSpec], inputNum :: Int}
 
 instance GenSymSimple NodeSpec Node where
   simpleFresh (NodeSpec (ComponentSpec op ii) gi si) = do
-    o <- chooseFresh [0..si-1]
+    o <- chooseFresh [0 .. si - 1]
     i <- simpleFresh (SimpleListSpec ii (ValSpec si gi))
     return $ Node op o i
 
 instance GenSymSimple MiniProgSpec MiniProg where
   simpleFresh (MiniProgSpec c i) = do
     let specs = [NodeSpec c1 i (length c) | c1 <- c]
-    o <- chooseFresh [0..length c - 1]
+    o <- chooseFresh [0 .. length c - 1]
     flip MiniProg o <$> traverse simpleFresh specs
 
 acyclicProg :: (MonadUnion m, MonadError VerificationConditions m) => MiniProg -> m ()
@@ -105,12 +106,12 @@ genEnhancedMiniProg inputs (MiniProg prog outputIdx) intermediateGen = flip Enha
     go [] = return []
     go (Node op pos nodeInputs : xs) = do
       r <- go xs
-      g <- traverse (const intermediateGen) [0..length nodeInputs]
+      g <- traverse (const intermediateGen) [0 .. length nodeInputs]
       let (ret : input1) = g
       tell $ IntermediateVarSet $ extractSymbolics (ret, input1)
       return (EnhancedNode op (ret, pos) (zip input1 nodeInputs) : r)
 
--- result_*, input_* are indices / 
+-- result_*, input_* are indices /
 -- result_i = someOp ...
 -- result_j = someOp input_j_1 input_j_2
 
