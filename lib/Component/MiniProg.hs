@@ -7,7 +7,6 @@ import qualified Data.ByteString as B
 import qualified Data.HashMap.Strict as M
 import GHC.Generics
 import Grisette
-import Debug.Trace
 
 data Val
   = Internal (UnionM Int)
@@ -38,7 +37,7 @@ data MiniProg = MiniProg {nodes :: [Node], output :: UnionM Int}
 data ComponentSpec = ComponentSpec { componentOp :: B.ByteString, componentInput :: Int }
 data NodeSpec = NodeSpec { componentInfo :: ComponentSpec, globalInputNum :: Int, globalSlotNum :: Int }
 
-data ProgSpec = ProgSpec { componentSpec :: [ComponentSpec], inputNum :: Int }
+data MiniProgSpec = MiniProgSpec { componentSpec :: [ComponentSpec], inputNum :: Int }
 
 instance GenSymSimple NodeSpec Node where
   simpleFresh (NodeSpec (ComponentSpec op ii) gi si) = do
@@ -46,8 +45,8 @@ instance GenSymSimple NodeSpec Node where
     i <- simpleFresh (SimpleListSpec ii (ValSpec si gi))
     return $ Node op o i
 
-instance GenSymSimple ProgSpec MiniProg where
-  simpleFresh (ProgSpec c i) = do
+instance GenSymSimple MiniProgSpec MiniProg where
+  simpleFresh (MiniProgSpec c i) = do
     let specs = [NodeSpec c1 i (length c) | c1 <- c]
     o <- chooseFresh [0..length c - 1]
     flip MiniProg o <$> traverse simpleFresh specs
@@ -111,6 +110,19 @@ genEnhancedMiniProg inputs (MiniProg prog outputIdx) intermediateGen = flip Enha
       tell $ IntermediateVarSet $ extractSymbolics (ret, input1)
       return (EnhancedNode op (ret, pos) (zip input1 nodeInputs) : r)
 
+-- result_*, input_* are indices / 
+-- result_i = someOp ...
+-- result_j = someOp input_j_1 input_j_2
+
+-- enhanced:
+-- value_i = someOp
+-- value_j = someOp input_value_j_1 input_value_j_2
+
+-- connected condition
+-- result_i == input_j_1 `implies` value_i ==~ input_value_j_1
+
+-- value_j = someOp (ite (= result_1 input_j_1) value_1 (ite (= result_2 input_j_1)) value_2 ...) (...)
+
 connected ::
   forall m a.
   (MonadUnion m, MonadError VerificationConditions m, SEq a) =>
@@ -160,8 +172,13 @@ semanticsCorrect fm (EnhancedMiniProg enodes _) = go enodes
       symAssert (interpretRes ==~ o)
       go xs
 
+miniProgWellFormedConstraints :: (UnionLike m, MonadError VerificationConditions m) => MiniProg -> m ()
+miniProgWellFormedConstraints prog = do
+  acyclicProg prog
+  noDuplicateOutputProg prog
+
 interpretMiniProg ::
-  ( Show a, UnionLike m,
+  ( UnionLike m,
     MonadError VerificationConditions m,
     MonadFresh m,
     MonadWriter IntermediateVarSet m,
@@ -175,10 +192,8 @@ interpretMiniProg ::
   m a ->
   m a
 interpretMiniProg inputs prog fm intermediateGen = do
-  acyclicProg prog
-  noDuplicateOutputProg prog
   enhanced <- genEnhancedMiniProg inputs prog intermediateGen
-  trace (show enhanced) $ connected enhanced
+  connected enhanced
   semanticsCorrect fm enhanced
   let outputs = getOutputs enhanced
   v <- liftToMonadUnion $ enhancedOutput enhanced

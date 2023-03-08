@@ -28,10 +28,13 @@ flag fast
 
 library
   exposed-modules:
+      Component.CEGIS
       Component.ConcreteMiniProg
+      Component.ConcreteProg
       Component.IntermediateVarSet
       Component.MiniProg
       Component.Ops
+      Component.Prog
       Core
       Gen
       Interpreter

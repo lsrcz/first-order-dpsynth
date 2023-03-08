@@ -2,18 +2,13 @@ module Main where
 
 import Component.MiniProg
 import Grisette
-import Component.IntermediateVarSet (IntermediateVarSet)
-import Control.Monad.Writer
-import Control.Monad.Except
 import Component.Ops
-import Data.Bifunctor
 import Data.Maybe
+import Component.CEGIS
 import Component.ConcreteMiniProg
-import Control.Exception
-import Component.ConcreteMiniProg (cegisCustomized)
 
-progSpec1 :: ProgSpec
-progSpec1 = ProgSpec [
+progSpec1 :: MiniProgSpec
+progSpec1 = MiniProgSpec [
   ComponentSpec "negate" 1,
   ComponentSpec "+" 2,
   ComponentSpec "+" 2,
@@ -33,12 +28,14 @@ prog2 = MiniProg [
 cprog2 :: CMiniProg
 cprog2 = fromJust $ toCon prog2
 
+{-
 ep :: EnhancedMiniProg SymInteger
 ep = case runWriterT $ runFreshT (genEnhancedMiniProg [a,b,c] prog2 (chooseSimpleFresh [a, b, c, -b, a-b, a + a - b, symMax (a + a - b) c])) "ep" :: UnionM (EnhancedMiniProg SymInteger, IntermediateVarSet) of
   SingleU (v, _) -> v
 
 keep :: [Int] -> EnhancedMiniProg SymInteger -> EnhancedMiniProg SymInteger
 keep v (EnhancedMiniProg n o) = (EnhancedMiniProg [n !! x | x <- v] o)
+-}
 
 a :: SymInteger
 a = "a"
@@ -54,12 +51,15 @@ gen = do
   f :: SymInteger =~> SymInteger =~> SymInteger =~> SymInteger <- simpleFresh ()
   mrgReturn (f # "a" # "b" # "c")
 
+{-
 gen2 :: M SymInteger
 gen2 = do
   chooseSimpleFresh [a, b, c, -b, a-b, a + a - b, symMax (a + a - b) c]
+  -}
 
 symMax l r = mrgIte (l >=~ r) l r
 
+{-
 v :: M SymInteger
 v = interpretMiniProg [a, b, c] prog2 funcMap gen2
 
@@ -74,6 +74,7 @@ v1r1 = do
 
 v1i :: IntermediateVarSet
 v1i = snd v1
+-}
 
 main :: IO ()
 main = do
