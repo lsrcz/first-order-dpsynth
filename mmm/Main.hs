@@ -6,13 +6,10 @@ import Component.ConcreteProg
 import Component.MiniProg
 import Component.Ops
 import Component.Prog
-import Control.Exception (ArithException (DivideByZero), throw)
 import Control.Monad
 import Control.Monad.Except
 import Core
-import Data.List
 import Data.Proxy
-import qualified Data.Type.Coercion as Grisette
 import Debug.Trace
 import Gen
 import Grisette
@@ -21,6 +18,7 @@ import Query
 import Spec
 import Test.QuickCheck
 import Timing
+import Common.Val
 
 mmm :: Num a => ConProgram a
 mmm =
@@ -70,21 +68,21 @@ allBitStrings :: Int -> [[Int]]
 allBitStrings i = filter isNotConsecutive $ replicateM i [0, 1, -1]
 
 apply :: (Show a2, Num a2) => [[a2]] -> [Int] -> a2
-apply [] [] = 0
-apply (_ : xs) (0 : ys) = apply xs ys
-apply ([x] : xs) (1 : ys) = x + apply xs ys
-apply ([x] : xs) (-1 : ys) = -x + apply xs ys
+apply [[]] [] = 0
+apply [_ : xs] (0 : ys) = apply [xs] ys
+apply [x : xs] (1 : ys) = x + apply [xs] ys
+apply [x : xs] (-1 : ys) = -x + apply [xs] ys
 apply l r = trace (show l) $ trace (show r) $ undefined
 
 safeApply :: (SimpleMergeable a, Num a, SafeLinearArith e a) => [[a]] -> [Int] -> ExceptT VerificationConditions UnionM a
-safeApply [] [] = mrgReturn 0
-safeApply (_ : xs) (0 : ys) = safeApply xs ys
-safeApply ([x] : xs) (1 : ys) = do
-  a <- safeApply xs ys
-  safeAdd' (const AssumptionViolation) x a
-safeApply ([x] : xs) (-1 : ys) = do
-  a <- safeApply xs ys
-  safeMinus' (const AssumptionViolation) a x
+safeApply [[]] [] = mrgReturn 0
+safeApply [_ : xs] (0 : ys) = safeApply [xs] ys
+safeApply [x : xs] (1 : ys) = do
+  ax <- safeApply [xs] ys
+  safeAdd' (const AssumptionViolation) x ax
+safeApply [x : xs] (-1 : ys) = do
+  ax <- safeApply [xs] ys
+  safeMinus' (const AssumptionViolation) ax x
 safeApply _ _ = undefined
 
 mmmSpecV :: forall a e. (Show a, Num a, SOrd a, SimpleMergeable a, SafeLinearArith e a) => [[a]] -> a -> ExceptT VerificationConditions UnionM SymBool
@@ -165,21 +163,11 @@ gen = simpleFresh () {-do
 input :: [SymInteger]
 input = [a, b, c]
 
-ok :: SymInteger -> SymBool
-ok i = simpleMerge $ do
-  v <- runExceptT $ mmmSpecV ((\x -> [x]) <$> input) i
-  case v of
-    Left vc -> con False
-    Right sb -> return sb
-
-rfSpec :: forall a e. (Show a, Num a, SOrd a, SimpleMergeable a, SafeLinearArith e a) => [[a]] -> ExceptT VerificationConditions UnionM a
-rfSpec = mmmSpec . transpose
-
 main :: IO ()
 main = do
   let config = precise z3 {Grisette.transcript = Just "a.smt2"}
 
-  Right (_, r) <- cegisCustomized' config rfSpec [input] mmmComponentProg1 funcMap gen
+  Right (_, r) <- cegisCustomized' config mmmSpec [input] mmmComponentProg1 funcMap gen
 
   let x = evaluateSymToCon r (mmmComponentProg1 :: Prog SymInteger) :: CProg Integer
   print x
@@ -188,8 +176,6 @@ main = do
         (interpretCProg [toSym l] (x :: CProg Integer) funcMap :: ExceptT VerificationConditions UnionM SymInteger)
           == mrgReturn (toSym $ mmmAlgo l :: SymInteger)
     )
-
-  throw DivideByZero
 
   quickCheck
     ( \(l :: [Integer]) ->

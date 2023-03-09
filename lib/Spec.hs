@@ -17,7 +17,7 @@ specV apply allBitStrings inputs v =
     foldl' (\acc x -> acc &&~ v >=~ x) (con True) t
       &&~ foldl' (\acc x -> acc ||~ v ==~ x) (con False) t
   where
-    t = map (apply inputs) (allBitStrings (length inputs))
+    t = map (apply inputs) (allBitStrings (length $ head inputs))
 
 safeSpecV ::
   forall a e.
@@ -33,7 +33,7 @@ safeSpecV safeApply allBitStrings inputs v = do
     foldl' (\acc x -> acc &&~ v >=~ x) (con True) t1
       &&~ foldl' (\acc x -> acc ||~ v ==~ x) (con False) t1
   where
-    t = mrgTraverse (safeApply inputs) (allBitStrings (length inputs))
+    t = mrgTraverse (safeApply inputs) (allBitStrings (length $ head inputs))
 
 spec ::
   forall a e.
@@ -50,7 +50,7 @@ spec apply allBitStrings inputs =
            in mrgIte (a >=~ acc) a acc
       )
       0
-      (allBitStrings (length inputs))
+      (allBitStrings (length $ head inputs))
 
 safeSpec ::
   forall a e.
@@ -66,4 +66,4 @@ safeSpec safeApply allBitStrings inputs =
         mrgReturn $ mrgIte (a >=~ acc) a acc
     )
     0
-    (allBitStrings (length inputs))
+    (allBitStrings (length $ head inputs))

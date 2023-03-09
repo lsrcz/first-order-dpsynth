@@ -7,6 +7,7 @@ import Control.Monad.Writer
 import GHC.Generics
 import GHC.Stack
 import Grisette
+import Debug.Trace
 
 genIntermediates :: (Monad m, UnionLike m, Mergeable a) => Int -> Int -> [a] -> m a -> m [[a]]
 genIntermediates num len inits intermediateGen = do
@@ -58,7 +59,7 @@ interpretProg ::
   FuncMap a ->
   m a ->
   m a
-interpretProg inputs (Prog inits miniprogs finalprog) fm intermediateGen = do
+interpretProg inputs (Prog inits miniprogs finalprog) fm intermediateGen = trace (show inputs) $ do
   -- Env intermediates :: Env a <- simpleFresh (GenEnvSpec inputs inits spec (length miniprogs))
   intermediates <- genIntermediates (length inits) (length (head inputs)) inits intermediateGen
   final <- go inputs intermediates miniprogs

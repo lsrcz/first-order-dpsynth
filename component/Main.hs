@@ -3,9 +3,9 @@ module Main where
 import Component.CEGIS
 import Component.ConcreteMiniProg
 import Component.MiniProg
-import Component.Ops
 import Data.Maybe
 import Grisette
+import Common.Val
 
 progSpec1 :: MiniProgSpec
 progSpec1 =
@@ -62,6 +62,7 @@ gen2 = do
   chooseSimpleFresh [a, b, c, -b, a-b, a + a - b, symMax (a + a - b) c]
   -}
 
+symMax :: (SimpleMergeable a, SOrd a) => a -> a -> a
 symMax l r = mrgIte (l >=~ r) l r
 
 {-
@@ -81,9 +82,9 @@ v1i = snd v1
 -}
 
 main :: IO ()
-main = do
+main = return (){-do
   Right (_, r) <-
-    cegisCustomized
+    cegisCustomized'
       (precise z3)
       (\x -> x ==~ symMax (a + a - b) c)
       [a, b, c]
@@ -92,6 +93,7 @@ main = do
       gen
   print r
   print $ evaluateSym False r prog1
+  -}
 
 {-
   print $ (interpretCMiniProg [a,b,c] cprog2 funcMap :: ExceptT VerificationConditions UnionM SymInteger)

@@ -28,6 +28,10 @@ flag fast
 
 library
   exposed-modules:
+      Bytecode.Instruction
+      Bytecode.Prog
+      Bytecode.Query
+      Common.Val
       Component.CEGIS
       Component.ConcreteMiniProg
       Component.ConcreteProg

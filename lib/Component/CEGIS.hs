@@ -32,7 +32,7 @@ cegisCustomized' ::
   FuncMap a ->
   M a ->
   IO (Either SolvingFailure ([[[a]]], Model))
-cegisCustomized' config spec inputs prog funcMap gen = SBV.runSMTWith ((sbvConfig config) {SBV.transcript = Just "x.smt2"}) $ do
+cegisCustomized' config spec inputs prog funcMap gen = SBV.runSMTWith (sbvConfig config) $ do
   let SymBool t = phiRight &&~ wellFormed
   (newm, a) <- lowerSinglePrim config t
   SBVC.query $
@@ -97,6 +97,8 @@ cegisCustomized' config spec inputs prog funcMap gen = SBV.runSMTWith ((sbvConfi
           _ -> error "Bad"
     guess :: Int -> [[a]] -> a -> SymBiMap -> SBVC.Query (SymBiMap, Either SolvingFailure Model)
     guess idx candidatei candidateo origm = do
+      liftIO $ print candidatei
+      liftIO $ print candidateo
       let SymBool evaluated = phiIO idx candidatei candidateo
       (newm, lowered) <- lowerSinglePrimCached config evaluated origm
       SBV.constrain lowered

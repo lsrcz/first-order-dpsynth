@@ -7,20 +7,7 @@ import qualified Data.ByteString as B
 import qualified Data.HashMap.Strict as M
 import GHC.Generics
 import Grisette
-
-data Val
-  = Internal (UnionM Int)
-  | Input (UnionM Int)
-  deriving (Generic, Show)
-  deriving (Mergeable, SEq, EvaluateSym) via (Default Val)
-
-data ValSpec = ValSpec {valInternalNum :: Int, valInputNum :: Int}
-
-instance GenSym ValSpec Val where
-  fresh (ValSpec int input) = do
-    intval <- chooseFresh [0 .. int - 1]
-    inputval <- chooseFresh [0 .. input - 1]
-    chooseFresh [Internal intval, Input inputval]
+import Common.Val
 
 data Node
   = Node B.ByteString (UnionM Int) [UnionM Val]
@@ -43,7 +30,7 @@ data MiniProgSpec = MiniProgSpec {componentSpec :: [ComponentSpec], inputNum :: 
 instance GenSymSimple NodeSpec Node where
   simpleFresh (NodeSpec (ComponentSpec op ii) gi si) = do
     o <- chooseFresh [0 .. si - 1]
-    i <- simpleFresh (SimpleListSpec ii (ValSpec si gi))
+    i <- simpleFresh (SimpleListSpec ii (ValSpec gi si))
     return $ Node op o i
 
 instance GenSymSimple MiniProgSpec MiniProg where

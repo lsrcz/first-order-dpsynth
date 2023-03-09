@@ -8,10 +8,7 @@ import Component.Ops
 import Component.Prog
 import Control.Monad
 import Control.Monad.Except
-import Control.Monad.Trans.Writer
 import Core
-import Data.Bifunctor
-import Data.List
 import Data.Proxy
 import Debug.Trace
 import Gen
@@ -21,6 +18,9 @@ import Query
 import Spec
 import Test.QuickCheck
 import Timing
+import Bytecode.Prog
+import Bytecode.Instruction
+import Common.Val
 
 mis :: (Num a) => ConProgram a
 mis =
@@ -61,17 +61,17 @@ allBitStrings :: Int -> [[Int]]
 allBitStrings i = filter isNotConsecutive $ replicateM i [0 :: Int, 1]
 
 apply :: (Num a2, Show a2) => [[a2]] -> [Int] -> a2
-apply [] [] = 0
-apply (_ : xs) (0 : ys) = apply xs ys
-apply ([x] : xs) (1 : ys) = x + apply xs ys
+apply [[]] [] = 0
+apply [_ : xs] (0 : ys) = apply [xs] ys
+apply [x : xs] (1 : ys) = x + apply [xs] ys
 apply l r = trace (show l) $ trace (show r) undefined
 
 safeApply :: (Num a, Mergeable a, SafeLinearArith e a) => [[a]] -> [Int] -> ExceptT VerificationConditions UnionM a
-safeApply [] [] = mrgReturn 0
-safeApply (_ : xs) (0 : ys) = safeApply xs ys
-safeApply ([x] : xs) (1 : ys) = do
-  a <- safeApply xs ys
-  safeAdd' (const AssumptionViolation) x a
+safeApply [[]] [] = mrgReturn 0
+safeApply [_ : xs] (0 : ys) = safeApply [xs] ys
+safeApply [x : xs] (1 : ys) = do
+  ax <- safeApply [xs] ys
+  safeAdd' (const AssumptionViolation) x ax
 safeApply _ _ = undefined
 
 misSpec :: forall a e. (Show a, Num a, SOrd a, SimpleMergeable a, SafeLinearArith e a) => [[a]] -> ExceptT VerificationConditions UnionM a
@@ -145,20 +145,16 @@ gen = simpleFresh () {-do
 input :: [SymInteger]
 input = [a, b, c]
 
-ok :: SymInteger -> SymBool
-ok i = simpleMerge $ do
-  v <- runExceptT $ misSpecV [input] i
-  case v of
-    Left vc -> con False
-    Right sb -> con True
+-- Bytecode
 
-int = simpleMerge $ fmap (first mrgReturn) $ runWriterT $ runExceptT $ runFreshT (interpretProg [input] misComponentProg funcMap gen) "int"
+bytecodeSpec :: BytecodeProgSpec ()
+bytecodeSpec = BytecodeProgSpec () [
+  BytecodeSpec [(["+"], 2), (["max"], 2)] 3,
+  BytecodeSpec [(["+"], 2)] 3
+  ] (BytecodeSpec [(["max"], 2)] 2)
 
-i1 :: UnionM (Either VerificationConditions SymInteger)
-i1 = fst int
-
-rfSpec :: forall a e. (Show a, Num a, SOrd a, SimpleMergeable a, SafeLinearArith e a) => [[a]] -> ExceptT VerificationConditions UnionM a
-rfSpec = misSpec . transpose
+bytecodeSketch :: BytecodeProg SymInteger
+bytecodeSketch = genSymSimple bytecodeSpec "bc"
 
 main :: IO ()
 main = do
@@ -166,9 +162,9 @@ main = do
 
   -- print i1
 
-  Right (_, r) <- timeItAll "cegis" $ cegisCustomized' (precise z3) rfSpec [input] misComponentProg1 funcMap gen
+  Right (_, r) <- timeItAll "cegis" $ cegisCustomized' (precise z3) misSpec [input] misComponentProg funcMap gen
   -- print r
-  let x = evaluateSymToCon r (misComponentProg1 :: Prog SymInteger) :: CProg Integer
+  let x = evaluateSymToCon r (misComponentProg :: Prog SymInteger) :: CProg Integer
   print x
 
   quickCheck
@@ -185,8 +181,8 @@ main = do
           == mrgReturn (toSym $ misAlgo l :: SymInteger)
     )
 
-  let x :: ExceptT VerificationConditions UnionM SymInteger = interpretCProg [[1, 3, -4, 5, -6, 7]] (misComponentCProg :: CProg Integer) funcMap
-  print x
+  let synthed :: ExceptT VerificationConditions UnionM SymInteger = interpretCProg [[1, 3, -4, 5, -6, 7]] (misComponentCProg :: CProg Integer) funcMap
+  print synthed
   print (misAlgo [1, 3, -4, 5, -6, 7] :: Integer)
 
   misIntSynthedExtV :: Maybe (ConProgram Integer) <-

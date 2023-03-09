@@ -10,6 +10,9 @@ import Grisette
 import Ops
 import Query
 import Timing
+import Test.QuickCheck
+import Interpreter
+import Debug.Trace
 
 assem :: Num a => ConProgram a
 assem =
@@ -41,14 +44,17 @@ assemSketchExt _ =
     (ExtProgramSpec @c @s [0] (CombASTSpec0 1 1 ["zero", "id"] ["+"]) "min" 2 2 2 4)
     "assemopt"
 
-assemAlgo :: forall a. (Show a, Num a, Ord a) => [[a]] -> a
-assemAlgo = go 0 0
+assemAlgoTransposed :: forall a. (Show a, Num a, Ord a) => [[a]] -> a
+assemAlgoTransposed = go 0 0
   where
     go line1 line2 [] = min line1 line2
     go line1 line2 ([stay1, switch1, stay2, switch2] : xs) =
       {-trace (show line1) $ trace (show line2) $ trace (show x) $-}
       go (min (line1 + stay1) (line2 + switch1)) (min (line2 + stay2) (line1 + switch2)) xs
     go _ _ _ = undefined
+
+assemAlgo :: forall a. (Show a, Num a, Ord a) => [[a]] -> a
+assemAlgo = assemAlgoTransposed . transpose
 
 data S = Stay1 | Switch1 | Stay2 | Switch2 deriving (Show, Eq, Ord)
 
@@ -71,17 +77,20 @@ allSpec n 1 = [Stay1 : x | x <- allSpec (n - 1) 1] ++ [Switch2 : x | x <- allSpe
 allSpec n 2 = [Stay2 : x | x <- allSpec (n - 1) 2] ++ [Switch1 : x | x <- allSpec (n - 1) 1]
 allSpec _ _ = undefined
 
-apply :: (Num a) => [[a]] -> [S] -> a
-apply [] [] = 0
-apply ([stay1, _, _, _] : xs) (Stay1 : ys) = stay1 + apply xs ys
-apply ([_, switch1, _, _] : xs) (Switch1 : ys) = switch1 + apply xs ys
-apply ([_, _, stay2, _] : xs) (Stay2 : ys) = stay2 + apply xs ys
-apply ([_, _, _, switch2] : xs) (Switch2 : ys) = switch2 + apply xs ys
-apply _ _ = undefined
+applyTransposed :: (Show a, Num a) => [[a]] -> [S] -> a
+applyTransposed [] [] = 0
+applyTransposed ([stay1, _, _, _] : xs) (Stay1 : ys) = stay1 + applyTransposed xs ys
+applyTransposed ([_, switch1, _, _] : xs) (Switch1 : ys) = switch1 + applyTransposed xs ys
+applyTransposed ([_, _, stay2, _] : xs) (Stay2 : ys) = stay2 + applyTransposed xs ys
+applyTransposed ([_, _, _, switch2] : xs) (Switch2 : ys) = switch2 + applyTransposed xs ys
+applyTransposed l r = trace (show l) $ trace (show r) $ undefined
+
+apply :: (Show a, Num a) => [[a]] -> [S] -> a
+apply x = trace ("apply" ++ show x) $ applyTransposed $ transpose x
 
 assemSpec :: forall a e. (Show a, Num a, SOrd a, SimpleMergeable a, SafeLinearArith e a) => [[a]] -> ExceptT VerificationConditions UnionM a
 assemSpec inputs =
-  mrgReturn $ trav (sort $ allSpec (length inputs) 1 ++ allSpec (length inputs) 2)
+  mrgReturn $ trav (sort $ allSpec (length $ head inputs) 1 ++ allSpec (length $ head inputs) 2)
   where
     trav [] = undefined
     trav [v] = apply inputs v
@@ -93,18 +102,27 @@ assemSpecV inputs v =
     foldl' (\acc x -> acc &&~ v <=~ x) (con True) t
       &&~ foldl' (\acc x -> acc ||~ v ==~ x) (con False) t
   where
-    t = map (apply inputs) $ allSpec (length inputs) 1 ++ allSpec (length inputs) 2
+    t = map (apply inputs) $ allSpec (length $ head inputs) 1 ++ allSpec (length $ head inputs) 2
 
 cap :: (SOrd a, Num a) => [[a]] -> SymBool
 cap = foldl (\acc y -> acc &&~ y >=~ -16 &&~ y <=~ 16) (con True) . join
+
+px :: [(Integer, Integer, Integer, Integer)] -> [[Integer]]
+px [] = [[],[],[],[]]
+px ((a,b,c,d):xs) = case px xs of
+  [as,bs,cs,ds] -> [a:as,b:bs,c:cs,d:ds]
+  _ -> undefined
 
 main :: IO ()
 main = do
   let config = precise z3
 
-  assemIntSynthedExtV :: Maybe (ConProgram Integer) <-
+  Just assemIntSynthedExtV :: Maybe (ConProgram Integer) <-
     timeItAll "assembextV" $ synth1V config availableUnary availableBinary () (const $ con True) (assemSpecV @SymInteger) (assemSketchExt (Proxy @Integer))
   print assemIntSynthedExtV
+
+  quickCheck (\(l :: [(Integer, Integer, Integer, Integer)]) ->
+    interpretSketch availableUnary availableBinary (toSym assemIntSynthedExtV) (toSym $ px l) == mrgReturn (toSym $ assemAlgo (px l) :: SymInteger))
 
   assemIntSynthedCombV :: Maybe (ConProgram Integer) <-
     timeItAll "assembcombV" $ synth1V config availableUnary availableBinary () (const $ con True) (assemSpecV @SymInteger) (assemSketchComb (Proxy @Integer))

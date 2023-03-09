@@ -7,12 +7,7 @@ import qualified Data.HashMap.Strict as M
 import Data.List (sortBy)
 import GHC.Generics
 import Grisette
-
-data CVal
-  = CInternal Int
-  | CInput Int
-  deriving (Generic, Show)
-  deriving (ToCon Val) via (Default CVal)
+import Common.Val
 
 data CNode = CNode B.ByteString Int [CVal]
   deriving (Generic, Show)

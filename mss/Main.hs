@@ -10,6 +10,8 @@ import Ops
 import Query
 import Spec
 import Timing
+import Debug.Trace
+import GHC.Stack
 
 mss :: Num a => ConProgram a
 mss =
@@ -55,16 +57,16 @@ isConsecutive1 (_ : _) = undefined
 allBitStrings :: Int -> [[Int]]
 allBitStrings i = replicateM i [0 :: Int, 1]
 
-apply :: (Num a2) => [[a2]] -> [Int] -> a2
-apply [] [] = 0
-apply (_ : xs) (0 : ys) = apply xs ys
-apply ([x] : xs) (1 : ys) = x + apply xs ys
-apply _ _ = undefined
+apply :: (HasCallStack, Show a2, Num a2) => [[a2]] -> [Int] -> a2
+apply [[]] [] = 0
+apply [_ : xs] (0 : ys) = apply [xs] ys
+apply [x : xs] (1 : ys) = x + apply [xs] ys
+apply l r = trace (show l) $ trace (show r) $ undefined
 
-mssSpec :: forall a e. (Num a, SOrd a, SimpleMergeable a, SafeLinearArith e a) => [[a]] -> ExceptT VerificationConditions UnionM a
+mssSpec :: forall a e. (HasCallStack, Show a, Num a, SOrd a, SimpleMergeable a, SafeLinearArith e a) => [[a]] -> ExceptT VerificationConditions UnionM a
 mssSpec = spec apply allBitStrings
 
-mssSpecV :: forall a e. (Num a, SOrd a, SimpleMergeable a, SafeLinearArith e a) => [[a]] -> a -> ExceptT VerificationConditions UnionM SymBool
+mssSpecV :: forall a e. (HasCallStack, Show a, Num a, SOrd a, SimpleMergeable a, SafeLinearArith e a) => [[a]] -> a -> ExceptT VerificationConditions UnionM SymBool
 mssSpecV = specV apply allBitStrings
 
 main :: IO ()

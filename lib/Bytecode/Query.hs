@@ -1,25 +1,23 @@
-module Query where
-
+module Bytecode.Query where
+import Grisette
+import Bytecode.Instruction
 import Control.Monad.Except
-import Core
+import Bytecode.Prog
 import Data.Hashable
 import Data.Maybe
-import Grisette
-import Interpreter
 
-synthV ::
-  (Show val, ExtractSymbolics val, SimpleMergeable val, SEq val, ToCon val cval, EvaluateSym val, Eq val, Hashable val) =>
+bytecodeSynthV ::
+  (ExtractSymbolics val, SimpleMergeable val, SEq val, ToCon val cval, EvaluateSym val, Eq val, Hashable val) =>
   GrisetteSMTConfig n ->
-  UnaryFuncMap val ->
-  BinaryFuncMap val ->
+  FuncMap val ->
   [([[val]], val)] ->
   [[val]] ->
   val ->
   ([[val]] -> SymBool) ->
   ([[val]] -> val -> ExceptT VerificationConditions UnionM SymBool) ->
-  Program val ->
-  IO ([([[val]], val)], Maybe (ConProgram cval))
-synthV config u b cexs inputs output inputSpace spec sketch = do
+  BytecodeProg val ->
+  IO ([([[val]], val)], Maybe (CBytecodeProg cval))
+bytecodeSynthV config fm cexs inputs output inputSpace spec sketch = do
   m <- cegisExceptStdVC config (inputs, output) $ runExceptT $ do
     symAssume $ inputSpace inputs
     corr <- spec inputs output
@@ -27,7 +25,7 @@ synthV config u b cexs inputs output inputSpace spec sketch = do
     -- symAssume $ wellFormedProgram sketch
     mrgTraverse_
       ( \(i, o) -> do
-          res <- interpretSketch u b sketch i
+          res <- interpretBytecodeProg i sketch fm
           symAssert $ res ==~ o
       )
       ((inputs, output) : cexs)
@@ -35,8 +33,9 @@ synthV config u b cexs inputs output inputSpace spec sketch = do
     (r, Left _) -> return (r, Nothing)
     (r, Right mo) -> return (r, Just (evaluateSymToCon mo sketch))
 
+{-
 synth ::
-  (Show val, ExtractSymbolics val, SimpleMergeable val, SEq val, ToCon val cval, EvaluateSym val, Eq val, Hashable val) =>
+  (ExtractSymbolics val, SimpleMergeable val, SEq val, ToCon val cval, EvaluateSym val, Eq val, Hashable val) =>
   GrisetteSMTConfig n ->
   UnaryFuncMap val ->
   BinaryFuncMap val ->
@@ -60,32 +59,32 @@ synth config u b cexs inputs inputSpace spec sketch = do
   case m of
     (r, Left _) -> return (r, Nothing)
     (r, Right mo) -> return (r, Just (evaluateSymToCon mo sketch))
+    -}
 
-verifyV ::
-  (Show val, ExtractSymbolics val, SimpleMergeable val, SEq val, ToCon val cval, EvaluateSym val, Eq val, Hashable val) =>
+bytecodeVerifyV ::
+  (ExtractSymbolics val, SimpleMergeable val, SEq val, ToCon val cval, EvaluateSym val, Eq val, Hashable val) =>
   GrisetteSMTConfig n ->
-  UnaryFuncMap val ->
-  BinaryFuncMap val ->
+  FuncMap val ->
   [[val]] ->
   val ->
   ([[val]] -> SymBool) ->
   ([[val]] -> val -> ExceptT VerificationConditions UnionM SymBool) ->
-  Program val ->
+  BytecodeProg val ->
   IO (Maybe [[cval]])
-verifyV config u b inputs output inputSpace spec sketch = do
+bytecodeVerifyV config fm inputs output inputSpace spec sketch = do
   m <- solveExcept config (\case (Left AssertionViolation) -> con True; _ -> con False) $ runExceptT $ do
     symAssume $ inputSpace inputs
     -- symAssume $ wellFormedProgram sketch
     corr <- spec inputs output
     symAssume corr
-    res <- interpretSketch u b sketch inputs
+    res <- interpretBytecodeProg inputs sketch fm
     symAssert $ output ==~ res
   case m of
     Left _ -> return Nothing
     Right mo -> return $ Just (fmap (fromJust . toCon) <$> evaluateSym True mo inputs)
-
+{-
 verify ::
-  (Show val, ExtractSymbolics val, SimpleMergeable val, SEq val, ToCon val cval, EvaluateSym val, Eq val, Hashable val) =>
+  (ExtractSymbolics val, SimpleMergeable val, SEq val, ToCon val cval, EvaluateSym val, Eq val, Hashable val) =>
   GrisetteSMTConfig n ->
   UnaryFuncMap val ->
   BinaryFuncMap val ->
@@ -130,7 +129,7 @@ synth1 config u b inputSpec inputSpace spec sketch = go [] 3
   where
     go origCexs n = do
       print n
-      let inputs = genSymSimple (SimpleListSpec (fromIntegral $ inputNum sketch) (SimpleListSpec n inputSpec)) "a" :: [[val]]
+      let inputs = genSymSimple (SimpleListSpec n (SimpleListSpec (fromIntegral $ inputNum sketch) inputSpec)) "a" :: [[val]]
       (cexs, synthed) <- synth config u b origCexs inputs inputSpace spec sketch
       case synthed of
         Nothing -> do
@@ -138,12 +137,14 @@ synth1 config u b inputSpec inputSpace spec sketch = go [] 3
           return Nothing
         Just cp -> do
           print cexs
-          let inputs1 = genSymSimple (SimpleListSpec (fromIntegral $ inputNum sketch) (SimpleListSpec (n + 1) inputSpec)) "a" :: [[val]]
+          let inputs1 = genSymSimple (SimpleListSpec (n + 1) (SimpleListSpec (fromIntegral $ inputNum sketch) inputSpec)) "a" :: [[val]]
           v :: Maybe [[cval]] <- verify config u b inputs1 inputSpace spec (toSym cp)
           case v of
             Just _ -> go (cexs ++ origCexs) (n + 1)
             Nothing -> return $ Just cp
+    -}
 
+{-
 synth1V ::
   forall n inputSpec val cval.
   ( GenSymSimple inputSpec val,
@@ -158,29 +159,29 @@ synth1V ::
     Hashable val
   ) =>
   GrisetteSMTConfig n ->
-  UnaryFuncMap val ->
-  BinaryFuncMap val ->
+  FuncMap val ->
   inputSpec ->
   ([[val]] -> SymBool) ->
   ([[val]] -> val -> ExceptT VerificationConditions UnionM SymBool) ->
-  Program val ->
-  IO (Maybe (ConProgram cval))
-synth1V config u b inputSpec inputSpace spec sketch = go [] 3
+  BytecodeProg val ->
+  IO (Maybe (CBytecodeProg cval))
+synth1V config fm inputSpec inputSpace spec sketch = go [] 3
   where
     go origCexs n = do
       print n
-      let inputs = genSymSimple (SimpleListSpec (fromIntegral $ inputNum sketch) (SimpleListSpec n inputSpec)) "i" :: [[val]]
+      let inputs = genSymSimple (SimpleListSpec n (SimpleListSpec (fromIntegral $ inputNum sketch) inputSpec)) "i" :: [[val]]
       let output = genSymSimple inputSpec "o" :: val
-      (cexs, synthed) <- synthV config u b origCexs inputs output inputSpace spec sketch
+      (cexs, synthed) <- bytecodeSynthV config fm origCexs inputs output inputSpace spec sketch
       case synthed of
         Nothing -> do
           print cexs
           return Nothing
         Just cp -> do
           print cexs
-          let inputs1 = genSymSimple (SimpleListSpec (fromIntegral $ inputNum sketch) (SimpleListSpec (n + 1) inputSpec)) "i" :: [[val]]
+          let inputs1 = genSymSimple (SimpleListSpec (n + 1) (SimpleListSpec (fromIntegral $ inputNum sketch) inputSpec)) "i" :: [[val]]
           let output1 = genSymSimple inputSpec "o" :: val
           v :: Maybe [[cval]] <- verifyV config u b inputs1 output1 inputSpace spec (toSym cp)
           case v of
             Just _ -> go (cexs ++ origCexs) (n + 1)
             Nothing -> return $ Just cp
+            -}

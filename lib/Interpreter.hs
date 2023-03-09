@@ -7,7 +7,7 @@ import Data.Hashable
 import Grisette
 
 interpretIntAST ::
-  (Mergeable val, Eq val, Hashable val, SimpleMergeable val) =>
+  (Show val, Mergeable val, Eq val, Hashable val, SimpleMergeable val) =>
   UnaryFuncMap val ->
   BinaryFuncMap val ->
   [val] ->
@@ -17,6 +17,7 @@ interpretIntAST u b args = htmemo go
   where
     go (Arg v) = mrgLift $ do
       vv <- v
+      {-(if length args <= vv then trace (show args) $ trace (show vv) $ undefined else id) $-}
       mrgReturn $ args !! vv
     go (Const v) = mrgLift v
     go (Unary f sub) = do
@@ -32,7 +33,7 @@ interpretIntAST u b args = htmemo go
 
 interpretSketch ::
   forall val.
-  (Mergeable val, Eq val, Hashable val, SimpleMergeable val) =>
+  (Show val, Mergeable val, Eq val, Hashable val, SimpleMergeable val) =>
   UnaryFuncMap val ->
   BinaryFuncMap val ->
   Program val ->
@@ -41,10 +42,10 @@ interpretSketch ::
 interpretSketch u b sk = go (inits sk)
   where
     go :: [val] -> [[val]] -> ExceptT VerificationConditions UnionM val
-    go v [] = interpretIntAST u b v #~ terminate sk
-    go v (a : as) = do
+    go v (x:_) | null x = interpretIntAST u b v #~ terminate sk
+    go v l = do
       r <-
         mrgTraverse
-          (\(x :: UnionM (AST val)) -> interpretIntAST u b (a ++ v) #~ x)
+          (\(x :: UnionM (AST val)) -> interpretIntAST u b ((head <$> l) ++ v) #~ x)
           (updates sk)
-      go r as
+      go r (tail <$> l)

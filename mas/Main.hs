@@ -9,6 +9,8 @@ import Ops
 import Query
 import Spec
 import Timing
+import Test.QuickCheck
+import Interpreter
 
 mas :: Num a => ConProgram a
 mas =
@@ -53,35 +55,43 @@ masSketchExt _ =
     (ExtProgramSpec @c @s [0] (CombASTSpec0 1 1 ["-", "id", "zero"] ["+"]) "max" 2 3 3 1)
     "mas"
 
+isConsecutive0begin :: [Int] -> Bool
+isConsecutive0begin [] = True
+isConsecutive0begin (0 : xs) = isConsecutive0begin xs
+isConsecutive0begin (1 : xs) = isAlternativem1 xs
+isConsecutive0begin (-1 : xs) = isAlternative1 xs
+isConsecutive0begin (_ : _) = undefined
+
+isAlternative1 :: [Int] -> Bool
+isAlternative1 [] = True
+isAlternative1 (0:xs) = isConsecutive0 xs
+isAlternative1 (1:xs) = isAlternativem1 xs
+isAlternative1 (-1:_) = False
+isAlternative1 (_ : _) = undefined
+
+isAlternativem1 :: [Int] -> Bool
+isAlternativem1 [] = True
+isAlternativem1 (0:xs) = isConsecutive0 xs
+isAlternativem1 (-1:xs) = isAlternative1 xs
+isAlternativem1 (1:_) = False
+isAlternativem1 (_ : _) = undefined
+
+
 isConsecutive0 :: [Int] -> Bool
 isConsecutive0 [] = True
 isConsecutive0 (0 : xs) = isConsecutive0 xs
-isConsecutive0 (1 : xs) = isConsecutive1 xs
-isConsecutive0 (-1 : xs) = isConsecutivem1 xs
+isConsecutive0 (-1 : _) = False
+isConsecutive0 (1 : _) = False
 isConsecutive0 (_ : _) = undefined
 
-isConsecutive1 :: [Int] -> Bool
-isConsecutive1 [] = True
-isConsecutive1 (1 : _) = False
-isConsecutive1 (-1 : xs) = isConsecutivem1 xs
-isConsecutive1 (0 : xs) = all (== 0) xs
-isConsecutive1 (_ : _) = undefined
-
-isConsecutivem1 :: [Int] -> Bool
-isConsecutivem1 [] = True
-isConsecutivem1 (-1 : _) = False
-isConsecutivem1 (1 : xs) = isConsecutive1 xs
-isConsecutivem1 (0 : xs) = all (== 0) xs
-isConsecutivem1 (_ : _) = undefined
-
 allBitStrings :: Int -> [[Int]]
-allBitStrings i = filter isConsecutive0 $ replicateM i [0 :: Int, 1, -1]
+allBitStrings i = filter isConsecutive0begin $ replicateM i [0 :: Int, 1, -1]
 
 apply :: (Num a2) => [[a2]] -> [Int] -> a2
-apply [] [] = 0
-apply (_ : xs) (0 : ys) = apply xs ys
-apply ([x] : xs) (1 : ys) = x + apply xs ys
-apply ([x] : xs) (-1 : ys) = apply xs ys - x
+apply [[]] [] = 0
+apply [_ : xs] (0 : ys) = apply [xs] ys
+apply [x : xs] (1 : ys) = x + apply [xs] ys
+apply [x : xs] (-1 : ys) = apply [xs] ys - x
 apply _ _ = undefined
 
 masSpec :: forall a e. (Num a, SOrd a, SimpleMergeable a, SafeLinearArith e a) => [[a]] -> ExceptT VerificationConditions UnionM a
@@ -97,10 +107,12 @@ main :: IO ()
 main = do
   let config = precise z3
 
-  masIntSynthedExtV :: Maybe (ConProgram Integer) <-
+  Just masIntSynthedExtV :: Maybe (ConProgram Integer) <-
     timeItAll "masextV" $ synth1V config availableUnary availableBinary () (const $ con True) (masSpecV @SymInteger) (masSketchExt (Proxy @Integer))
   print masIntSynthedExtV
 
-  masIntSynthedCombV :: Maybe (ConProgram Integer) <-
+  quickCheck (\(l :: [Integer]) -> interpretSketch availableUnary availableBinary (toSym masIntSynthedExtV) [toSym l] == mrgReturn (toSym $ masAlgo l :: SymInteger))
+
+  Just masIntSynthedCombV :: Maybe (ConProgram Integer) <-
     timeItAll "mascombV" $ synth1V config availableUnary availableBinary () (const $ con True) (masSpecV @SymInteger) (masSketchComb (Proxy @Integer))
   print masIntSynthedCombV
