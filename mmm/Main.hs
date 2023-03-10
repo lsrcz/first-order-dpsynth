@@ -19,6 +19,11 @@ import Spec
 import Test.QuickCheck
 import Timing
 import Common.Val
+import Bytecode.Prog
+import Bytecode.Instruction
+import Bytecode.Query
+import Bytecode.Ops
+import Data.Foldable
 
 mmm :: Num a => ConProgram a
 mmm =
@@ -100,6 +105,40 @@ safeMmmSpec = safeSpec safeApply allBitStrings
 cap :: (SOrd a, Num a) => [[a]] -> SymBool
 cap = foldl (\acc y -> acc &&~ y >=~ -16 &&~ y <=~ 16) (con True) . join
 
+-- Bytecode
+
+bytecodeSpec :: BytecodeProgSpec ()
+bytecodeSpec = BytecodeProgSpec () [
+  BytecodeSpec [(["max"], 2)] 4,
+  BytecodeSpec [(["+"], 2), (["+"], 2), (["max"], 2)] 4,
+  BytecodeSpec [(["-"], 2), (["-"], 2), (["max"], 2)] 4
+  ] (BytecodeSpec [(["max"], 2), (["max"], 2)] 3)
+
+bytecodeSketch :: BytecodeProg SymInteger
+bytecodeSketch = genSymSimple bytecodeSpec "bc"
+
+gbytecodeSpec :: GroupedBytecodeProgSpec ()
+gbytecodeSpec = GroupedBytecodeProgSpec () [
+  GroupedBytecodeSpec [[(["max"], 2)]] 4,
+  GroupedBytecodeSpec [[(["+"], 2), (["+"], 2)], [(["max"], 2)]] 4,
+  GroupedBytecodeSpec [[(["-"], 2), (["-"], 2)], [(["max"], 2)]] 4
+  ] (GroupedBytecodeSpec [[(["max"], 2)], [(["max"], 2)]] 3)
+
+gbytecodeSketch :: (Num a, GenSymSimple () a) => BytecodeProg a
+gbytecodeSketch = genSymSimple gbytecodeSpec "bc"
+
+bytecodeSpec1 :: BytecodeProgSpec ()
+bytecodeSpec1 = BytecodeProgSpec () [
+  BytecodeSpec [(["+", "max", "-"], 2), (["+", "max", "-"], 2), (["+", "max", "-"], 2)] 4,
+  BytecodeSpec [(["+", "max", "-"], 2), (["+", "max", "-"], 2), (["+", "max", "-"], 2)] 4,
+  BytecodeSpec [(["+", "max", "-"], 2), (["+", "max", "-"], 2), (["+", "max", "-"], 2)] 4
+  ] (BytecodeSpec [(["max"], 2), (["max"], 2)] 3)
+
+bytecodeSketch1 :: BytecodeProg SymInteger
+bytecodeSketch1 = genSymSimple bytecodeSpec1 "bc"
+
+
+
 -- Component
 
 mmmComponentCProg :: Num a => CProg a
@@ -166,6 +205,35 @@ input = [a, b, c]
 main :: IO ()
 main = do
   let config = precise z3 {Grisette.transcript = Just "a.smt2"}
+
+  let configb = precise yices {Grisette.transcript = Just "b.smt2"}
+
+  Just mmmIntSynthedBytecode :: Maybe (CBytecodeProg (IntN 6)) <-
+    timeItAll "misBytecode" $ bytecodeSynth1V configb 1 bytecodeFuncMap () (foldl' (\acc v -> acc &&~ (v >=~ -8) &&~ (v <=~ 8)) (con True) . join)
+      (mmmSpecV @(SymIntN 6)) gbytecodeSketch
+  print mmmIntSynthedBytecode
+
+{-
+  quickCheck
+    ( \(l :: [IntN 6]) ->
+        (interpretBytecodeProg [toSym l] (toSym mmmIntSynthedBytecode) bytecodeFuncMap :: ExceptT VerificationConditions UnionM (SymIntN 6))
+          == mrgReturn (toSym $ mmmAlgo l :: SymIntN 6)
+    )
+    -}
+
+  Right (_, r) <- cegisCustomized config mmmSpec [[[]],[[a]],[[a,b]],[[a,b,c]],[[a,b,c,d]]] mmmComponentProg1 funcMap gen
+
+  let x = evaluateSymToCon r (mmmComponentProg1 :: Prog SymInteger) :: CProg Integer
+  print x
+  quickCheck
+    ( \(l :: [Integer]) ->
+        (interpretCProg [toSym l] (x :: CProg Integer) funcMap :: ExceptT VerificationConditions UnionM SymInteger)
+          == mrgReturn (toSym $ mmmAlgo l :: SymInteger)
+    )
+
+
+
+
 
   Right (_, r) <- cegisCustomized' config mmmSpec [input] mmmComponentProg1 funcMap gen
 

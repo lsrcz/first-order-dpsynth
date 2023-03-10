@@ -29,6 +29,7 @@ flag fast
 library
   exposed-modules:
       Bytecode.Instruction
+      Bytecode.Ops
       Bytecode.Prog
       Bytecode.Query
       Common.Val

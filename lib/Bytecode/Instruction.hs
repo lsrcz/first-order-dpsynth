@@ -9,7 +9,7 @@ import Common.Val
 type Op = B.ByteString
 
 data Instruction = Instruction (UnionM Op) [UnionM Val] deriving (Show, Generic)
-  deriving (Mergeable, EvaluateSym) via (Default Instruction)
+  deriving (Mergeable, EvaluateSym, ToSym CInstruction) via (Default Instruction)
 
 data CInstruction = CInstruction Op [CVal]
   deriving (Generic, Show)
@@ -38,11 +38,26 @@ data BytecodeSpec = BytecodeSpec {
   inputNumBCSpec :: Int
 }
 
+data GroupedBytecodeSpec = GroupedBytecodeSpec {
+  instrsGBCSpec :: [[([Op], Int)]],
+  inputNumGBCSpec :: Int
+}
+
 instance GenSym BytecodeSpec Bytecode where
 instance GenSymSimple BytecodeSpec Bytecode where
   simpleFresh (BytecodeSpec is n) =
     traverse (\((op, arg), pos) -> simpleFresh (InstructionSpec op arg n pos)) $
       zip is [0..]
+
+instance GenSym GroupedBytecodeSpec Bytecode where
+instance GenSymSimple GroupedBytecodeSpec Bytecode where
+  simpleFresh (GroupedBytecodeSpec is numInputs) = go 0 is
+    where
+      go _ [] = return []
+      go n (x:xs) = do
+        h <- traverse (\(op, arg) -> simpleFresh (InstructionSpec op arg numInputs n)) x 
+        r <- go (n + length x) xs
+        return $ h ++ r
 
 data Func a where
   Func :: (forall m. (MonadError VerificationConditions m, MonadUnion m, Mergeable a) => [a] -> m a) -> Func a

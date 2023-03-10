@@ -33,7 +33,7 @@ cegisCustomized' ::
   M a ->
   IO (Either SolvingFailure ([[[a]]], Model))
 cegisCustomized' config spec inputs prog funcMap gen = SBV.runSMTWith (sbvConfig config) $ do
-  let SymBool t = phiRight &&~ wellFormed
+  let SymBool t = {-phiRight &&~-} wellFormed
   (newm, a) <- lowerSinglePrim config t
   SBVC.query $
     snd <$> do
@@ -67,9 +67,11 @@ cegisCustomized' config spec inputs prog funcMap gen = SBV.runSMTWith (sbvConfig
       x <- runExceptT $ fst $ f idx i
       return $ x ==~ Right o
 
+{-
     phiRight = simpleMerge $ do
       v <- runExceptT e0
       con $ isRight v
+      -}
 
     check :: Model -> IO (Either SolvingFailure ([[a]], a))
     check candidate = do
@@ -124,3 +126,107 @@ cegisCustomized' config spec inputs prog funcMap gen = SBV.runSMTWith (sbvConfig
           (newm, res) <- timeItAll "GUESS" $ guess idx cex cexr origm
           loop (idx + 1) res (cex : cexs) newm
     loop _ (Left v) _ origm = return (origm, Left v)
+
+cegisCustomized ::
+  forall n a.
+  (ExtractSymbolics a, EvaluateSym a, Mergeable a, SEq a, Show a, ToSym a a, ToCon a a) =>
+  GrisetteSMTConfig n ->
+  ([[a]] -> ExceptT VerificationConditions UnionM a) ->
+  [[[a]]] ->
+  Prog a ->
+  FuncMap a ->
+  M a ->
+  IO (Either SolvingFailure ([[[a]]], Model))
+cegisCustomized config spec inputs prog funcMap gen = SBV.runSMTWith (sbvConfig config) $ do
+  let SymBool t = wellFormed
+  (newm, a) <- lowerSinglePrim config t
+  SBVC.query $
+    snd <$> do
+      SBV.constrain a
+      r <- timeItAll "INITIAL GUESS" SBVC.checkSat
+      mr <- case r of
+        SBVC.Sat -> do
+          md <- SBVC.getModel
+          return $ Right $ parseModel config md newm
+        _ -> return $ Left $ sbvCheckSatResult r
+      loop 1 mr inputs [] newm
+  where
+    forallSymbols :: SymbolSet
+    forallSymbols = extractSymbolics inputs
+
+    wellFormed :: SymBool
+    wellFormed = simpleMerge $ do
+      v <-
+        runExceptT
+          (progWellFormedConstraints prog :: ExceptT VerificationConditions UnionM ())
+      return $ case v of
+        Left _ -> con False
+        Right _ -> con True
+
+    f :: Int -> [[a]] -> (ExceptT VerificationConditions UnionM a, IntermediateVarSet)
+    f idx input = first ExceptT $ simpleMerge $ fmap (first mrgReturn) $ runWriterT $ runExceptT $ runFreshT (interpretProg input prog funcMap gen) (FreshIdentWithInfo "x" idx)
+
+    phiIO :: Int -> [[a]] -> a -> SymBool
+    phiIO idx i o = simpleMerge $ do
+      x <- runExceptT $ fst $ f idx i
+      return $ x ==~ Right o
+
+    check :: [[[a]]] -> Model -> IO (Either SolvingFailure ([[a]], [[[a]]], a))
+    check [] _ = return (Left Unsat)
+    check (nextInput:remainingInputs) candidate = do
+      let evaluated :: CProg a = evaluateSymToCon candidate prog
+      let evr :: ExceptT VerificationConditions UnionM a = interpretCProg nextInput evaluated funcMap
+      let spr :: ExceptT VerificationConditions UnionM a = spec nextInput
+
+      let negphi = simpleMerge $ do
+            r <- runExceptT $ do
+              v <- evr
+              j <- spr
+              mrgReturn (v, j)
+            case r of
+              Left AssumptionViolation -> con False
+              Left AssertionViolation -> con True
+              Right (a, v) -> return $ nots $ v ==~ a
+      r <- solve config negphi
+      case r of
+        Left sf -> case sf of
+          Unsat -> check remainingInputs candidate
+          err -> return (Left err)
+        Right mo -> do
+          let newm = exact forallSymbols mo
+          let spre = evaluateSym True newm spr
+          case spre of
+            ExceptT (SingleU (Right v)) -> do
+              return $ Right (evaluateSym True newm nextInput, nextInput:remainingInputs, v)
+            _ -> error "Bad"
+
+    guess :: Int -> [[a]] -> a -> SymBiMap -> SBVC.Query (SymBiMap, Either SolvingFailure Model)
+    guess idx candidatei candidateo origm = do
+      liftIO $ print candidatei
+      liftIO $ print candidateo
+      let SymBool evaluated = phiIO idx candidatei candidateo
+      (newm, lowered) <- lowerSinglePrimCached config evaluated origm
+      SBV.constrain lowered
+      r <- SBVC.checkSat
+      case r of
+        SBVC.Sat -> do
+          md <- SBVC.getModel
+          let model = parseModel config md newm
+          return (newm, Right model)
+        _ -> return (newm, Left $ sbvCheckSatResult r)
+    loop ::
+      Int ->
+      Either SolvingFailure Model ->
+      [[[a]]] ->
+      [[[a]]] ->
+      SymBiMap ->
+      SBVC.Query (SymBiMap, Either SolvingFailure ([[[a]]], Model))
+    loop idx (Right mo) remainingInputs cexs origm = do
+      r <- liftIO $ timeItAll "CHECK" $ check remainingInputs mo
+      case r of
+        Left Unsat -> return (origm, Right (cexs, mo))
+        Left v -> return (origm, Left v)
+        Right (cex, newRemainingInputs, cexr) -> do
+          (newm, res) <- timeItAll "GUESS" $ guess idx cex cexr origm
+          loop (idx + 1) res newRemainingInputs (cex : cexs) newm
+    loop _ (Left v) _ _ origm = return (origm, Left v)

@@ -5,6 +5,7 @@ import Control.Monad.Except
 import Bytecode.Prog
 import Data.Hashable
 import Data.Maybe
+import Timing
 
 bytecodeSynthV ::
   (ExtractSymbolics val, SimpleMergeable val, SEq val, ToCon val cval, EvaluateSym val, Eq val, Hashable val) =>
@@ -144,8 +145,7 @@ synth1 config u b inputSpec inputSpace spec sketch = go [] 3
             Nothing -> return $ Just cp
     -}
 
-{-
-synth1V ::
+bytecodeSynth1V ::
   forall n inputSpec val cval.
   ( GenSymSimple inputSpec val,
     ExtractSymbolics val,
@@ -159,29 +159,29 @@ synth1V ::
     Hashable val
   ) =>
   GrisetteSMTConfig n ->
+  Int ->
   FuncMap val ->
   inputSpec ->
   ([[val]] -> SymBool) ->
   ([[val]] -> val -> ExceptT VerificationConditions UnionM SymBool) ->
   BytecodeProg val ->
   IO (Maybe (CBytecodeProg cval))
-synth1V config fm inputSpec inputSpace spec sketch = go [] 3
+bytecodeSynth1V config inputNum fm inputSpec inputSpace spec sketch = go [] 3
   where
     go origCexs n = do
       print n
-      let inputs = genSymSimple (SimpleListSpec n (SimpleListSpec (fromIntegral $ inputNum sketch) inputSpec)) "i" :: [[val]]
+      let inputs = genSymSimple (SimpleListSpec inputNum (SimpleListSpec n inputSpec)) "i" :: [[val]]
       let output = genSymSimple inputSpec "o" :: val
-      (cexs, synthed) <- bytecodeSynthV config fm origCexs inputs output inputSpace spec sketch
+      (cexs, synthed) <- timeItAll "Synth" $ bytecodeSynthV config fm origCexs inputs output inputSpace spec sketch
       case synthed of
         Nothing -> do
           print cexs
           return Nothing
         Just cp -> do
           print cexs
-          let inputs1 = genSymSimple (SimpleListSpec (n + 1) (SimpleListSpec (fromIntegral $ inputNum sketch) inputSpec)) "i" :: [[val]]
+          let inputs1 = genSymSimple (SimpleListSpec inputNum (SimpleListSpec (n + 1) inputSpec)) "i" :: [[val]]
           let output1 = genSymSimple inputSpec "o" :: val
-          v :: Maybe [[cval]] <- verifyV config u b inputs1 output1 inputSpace spec (toSym cp)
+          v :: Maybe [[cval]] <- timeItAll "Verify" $ bytecodeVerifyV config fm inputs1 output1 inputSpace spec (toSym cp)
           case v of
             Just _ -> go (cexs ++ origCexs) (n + 1)
             Nothing -> return $ Just cp
-            -}

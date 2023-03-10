@@ -6,7 +6,7 @@ data Val
   = Internal (UnionM Int)
   | Input (UnionM Int)
   deriving (Generic, Show)
-  deriving (Mergeable, SEq, EvaluateSym) via (Default Val)
+  deriving (Mergeable, SEq, EvaluateSym, ToSym CVal) via (Default Val)
 
 data ValSpec = ValSpec { valInputNum :: Int, valInternalNum :: Int}
 

@@ -14,10 +14,22 @@ data CBytecodeProg a = CBytecodeProg [a] [CBytecode] CBytecode
 deriving via (Default (CBytecodeProg c))
   instance ToCon s c => ToCon (BytecodeProg s) (CBytecodeProg c)
 
+deriving via (Default (BytecodeProg s))
+  instance ToSym c s => ToSym (CBytecodeProg c) (BytecodeProg s) 
+
 data BytecodeProgSpec spec = BytecodeProgSpec spec [BytecodeSpec] BytecodeSpec
+
+data GroupedBytecodeProgSpec spec = GroupedBytecodeProgSpec spec [GroupedBytecodeSpec] GroupedBytecodeSpec
 
 instance GenSymSimple spec a => GenSymSimple (BytecodeProgSpec spec) (BytecodeProg a) where
   simpleFresh (BytecodeProgSpec s b f) = do
+    inits <- traverse (const $ simpleFresh s) [0..length b - 1]
+    updates <- traverse simpleFresh b
+    final <- simpleFresh f
+    return $ BytecodeProg inits updates final
+
+instance GenSymSimple spec a => GenSymSimple (GroupedBytecodeProgSpec spec) (BytecodeProg a) where
+  simpleFresh (GroupedBytecodeProgSpec s b f) = do
     inits <- traverse (const $ simpleFresh s) [0..length b - 1]
     updates <- traverse simpleFresh b
     final <- simpleFresh f
