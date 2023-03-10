@@ -94,10 +94,10 @@ misComponentCProg :: Num a => CProg a
 misComponentCProg =
   CProg
     [0, 0]
-    [ CMiniProg [CNode "+" 0 [CInput 0, CInput 2]] 0,
-      CMiniProg [CNode "max" 0 [CInput 1, CInput 2]] 0
+    [ CMiniProg [CNode "+" (CInternal 0) [CInput 0, CInput 2]] (CInternal 0),
+      CMiniProg [CNode "max" (CInternal 0) [CInput 1, CInput 2]] (CInternal 0)
     ]
-    (CMiniProg [CNode "max" 0 [CInput 0, CInput 1]] 0)
+    (CMiniProg [CNode "max" (CInternal 0) [CInput 0, CInput 1]] (CInternal 0))
 
 misComponentProgSpec :: ProgSpec
 misComponentProgSpec =
@@ -166,6 +166,7 @@ main = do
   let config = precise z3
 
 
+{-
   Just misIntSynthedBytecode :: Maybe (CBytecodeProg Integer) <-
     timeItAll "misBytecode" $ bytecodeSynth1V config 1 bytecodeFuncMap () (const $ con True) (misSpecV @SymInteger) bytecodeSketch
   print misIntSynthedBytecode
@@ -175,12 +176,13 @@ main = do
         (interpretBytecodeProg [toSym l] (toSym misIntSynthedBytecode) bytecodeFuncMap :: ExceptT VerificationConditions UnionM SymInteger)
           == mrgReturn (toSym $ misAlgo l :: SymInteger)
     )
+    -}
 
   -- print i1
 
-  Right (_, r) <- timeItAll "cegis" $ cegisCustomized (precise z3) misSpec [[[]], [[a]], [[a,b]], [[a,b,c]], [[a,b,c,d]]] misComponentProg funcMap gen
+  Right (_, r) <- timeItAll "cegis" $ cegisCustomized (precise z3) misSpec [[[]], [[a]], [[a,b]], [[a,b,c]], [[a,b,c,d]]] misComponentProg1 funcMap gen
   -- print r
-  let x = evaluateSymToCon r (misComponentProg :: Prog SymInteger) :: CProg Integer
+  let x = evaluateSymToCon r (misComponentProg1 :: Prog SymInteger) :: CProg Integer
   print x
 
   quickCheck
@@ -191,9 +193,9 @@ main = do
 
 
 
-  Right (_, r) <- timeItAll "cegis" $ cegisCustomized' (precise z3) misSpec [input] misComponentProg funcMap gen
+  Right (_, r) <- timeItAll "cegis" $ cegisCustomized' (precise z3) misSpec [input] misComponentProg1 funcMap gen
   -- print r
-  let x = evaluateSymToCon r (misComponentProg :: Prog SymInteger) :: CProg Integer
+  let x = evaluateSymToCon r (misComponentProg1 :: Prog SymInteger) :: CProg Integer
   print x
 
   quickCheck

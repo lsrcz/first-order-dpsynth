@@ -146,27 +146,27 @@ mmmComponentCProg =
   CProg
     [0, 0, 0]
     [ CMiniProg
-        [ CNode "max" 0 [CInput 2, CInput 3]
+        [ CNode "max" (CInternal 0) [CInput 2, CInput 3]
         ]
-        0,
+        (CInternal 0),
       CMiniProg
-        [ CNode "+" 0 [CInput 0, CInput 1],
-          CNode "+" 1 [CInput 0, CInput 3],
-          CNode "max" 2 [CInternal 0, CInternal 1]
+        [ CNode "+" (CInternal 0) [CInput 0, CInput 1],
+          CNode "+" (CInternal 1) [CInput 0, CInput 3],
+          CNode "max" (CInternal 2) [CInternal 0, CInternal 1]
         ]
-        2,
+        (CInternal 2),
       CMiniProg
-        [ CNode "-" 0 [CInput 1, CInput 0],
-          CNode "-" 1 [CInput 2, CInput 0],
-          CNode "max" 2 [CInternal 0, CInternal 1]
+        [ CNode "-" (CInternal 0) [CInput 1, CInput 0],
+          CNode "-" (CInternal 1) [CInput 2, CInput 0],
+          CNode "max" (CInternal 2) [CInternal 0, CInternal 1]
         ]
-        2
+        (CInternal 2)
     ]
     ( CMiniProg
-        [ CNode "max" 0 [CInput 0, CInput 1],
-          CNode "max" 1 [CInput 2, CInternal 0]
+        [ CNode "max" (CInternal 0) [CInput 0, CInput 1],
+          CNode "max" (CInternal 1) [CInput 2, CInternal 0]
         ]
-        1
+        (CInternal 1)
     )
 
 mmmComponentProgSpec :: Num a => ProgSpecInit a
@@ -174,8 +174,8 @@ mmmComponentProgSpec =
   ProgSpecInit
     [0, 0, 0]
     [ MiniProgSpec [ComponentSpec "max" 2] 4,
-      MiniProgSpec [ComponentSpec "max" 2, ComponentSpec "+" 2, ComponentSpec "+" 2] 4,
-      MiniProgSpec [ComponentSpec "max" 2, ComponentSpec "-" 2, ComponentSpec "-" 2] 4
+      MiniProgSpec [RestrictedSpec "max" 2 (Just [2]) (Just [Internal 0,Internal 1]), RestrictedSpec "+" 2 (Just [1]) Nothing, RestrictedSpec "+" 2 (Just [0]) Nothing] 4,
+      MiniProgSpec [RestrictedSpec "max" 2 (Just [2]) (Just [Internal 0,Internal 1]), RestrictedSpec "-" 2 (Just [1]) Nothing, RestrictedSpec "-" 2 (Just [0]) Nothing] 4
     ]
     (MiniProgSpec [ComponentSpec "max" 2, ComponentSpec "max" 2] 3)
 
@@ -208,11 +208,13 @@ main = do
 
   let configb = precise yices {Grisette.transcript = Just "b.smt2"}
 
+{-
   Just mmmIntSynthedBytecode :: Maybe (CBytecodeProg (IntN 6)) <-
     timeItAll "misBytecode" $ bytecodeSynth1V configb 1 bytecodeFuncMap () (foldl' (\acc v -> acc &&~ (v >=~ -8) &&~ (v <=~ 8)) (con True) . join)
       (mmmSpecV @(SymIntN 6)) gbytecodeSketch
   print mmmIntSynthedBytecode
 
+-}
 {-
   quickCheck
     ( \(l :: [IntN 6]) ->

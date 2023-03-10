@@ -10,18 +10,19 @@ import Grisette
 import Common.Val
 
 data Node
-  = Node B.ByteString (UnionM Int) [UnionM Val]
+  = Node B.ByteString (UnionM Val) [UnionM Val]
   deriving (Generic, Show)
   deriving (Mergeable, SEq, EvaluateSym) via (Default Node)
 
-nodeOutputIdx :: Node -> UnionM Int
+nodeOutputIdx :: Node -> UnionM Val
 nodeOutputIdx (Node _ o _) = o
 
-data MiniProg = MiniProg {nodes :: [Node], output :: UnionM Int}
+data MiniProg = MiniProg {nodes :: [Node], output :: UnionM Val}
   deriving (Generic, Show)
   deriving (EvaluateSym, SEq) via (Default MiniProg)
 
 data ComponentSpec = ComponentSpec {componentOp :: B.ByteString, componentInput :: Int}
+  | RestrictedSpec {rcomponentOp :: B.ByteString, rcomponentInput :: Int, routputs :: Maybe [Int], rinputs :: Maybe [Val]}
 
 data NodeSpec = NodeSpec {componentInfo :: ComponentSpec, globalInputNum :: Int, globalSlotNum :: Int}
 
@@ -31,13 +32,28 @@ instance GenSymSimple NodeSpec Node where
   simpleFresh (NodeSpec (ComponentSpec op ii) gi si) = do
     o <- chooseFresh [0 .. si - 1]
     i <- simpleFresh (SimpleListSpec ii (ValSpec gi si))
-    return $ Node op o i
+    return $ Node op (mrgReturn $ Internal o) i
+  simpleFresh (NodeSpec (RestrictedSpec op ii ro ri) gi si) = do
+    o <- case ro of Nothing -> chooseFresh [0..si-1]; Just r -> chooseFresh r
+    i <- case ri of Nothing -> simpleFresh (SimpleListSpec ii (ValSpec gi si)); Just r -> simpleFresh (SimpleListSpec ii (ChooseSpec r))
+    return $ Node op (mrgReturn $ Internal o) i
 
 instance GenSymSimple MiniProgSpec MiniProg where
   simpleFresh (MiniProgSpec c i) = do
     let specs = [NodeSpec c1 i (length c) | c1 <- c]
     o <- chooseFresh [0 .. length c - 1]
-    flip MiniProg o <$> traverse simpleFresh specs
+    flip MiniProg (mrgReturn $ Internal o) <$> traverse simpleFresh specs
+
+{-
+lessProg :: (MonadUnion m, MonadError VerificationConditions m) => MiniProg -> m ()
+lessProg p = go (nodes p)
+  where
+    go [] = return ()
+    go (Node _ _ [l,r]:vs) = do
+      symAssert $ l <=~ r
+      go vs
+    go (Node _ _ _:vs) = go vs
+    -}
 
 acyclicProg :: (MonadUnion m, MonadError VerificationConditions m) => MiniProg -> m ()
 acyclicProg p = go (nodes p)
@@ -48,13 +64,14 @@ acyclicProg p = go (nodes p)
       go vs
     go1 _ [] = mrgReturn ()
     go1 vo (vi : vis) = do
-      symAssert
+      symAssert (vi <~ vo)
+      {-
         ( simpleMerge $ do
             vi' <- vi
             case vi' of
               Internal i -> return $ i <~ vo
               _ -> return (con True)
-        )
+        )-}
       go1 vo vis
 
 noDuplicateOutputProg :: (MonadUnion m, MonadError VerificationConditions m) => MiniProg -> m ()
@@ -69,7 +86,7 @@ noDuplicateOutputProg p = go (nodes p)
       symAssert (vo /=~ nodeOutputIdx n)
       go1 vo vs
 
-type EnhancedOutput a = (a, UnionM Int)
+type EnhancedOutput a = (a, UnionM Val)
 
 type EnhancedInput a = (a, UnionM Val)
 
@@ -79,7 +96,7 @@ data EnhancedNode a
   deriving (Show, Generic)
   deriving (EvaluateSym) via (Default (EnhancedNode a))
 
-data EnhancedMiniProg a = EnhancedMiniProg {enhancedNodes :: [EnhancedNode a], enhancedOutput :: UnionM Int}
+data EnhancedMiniProg a = EnhancedMiniProg {enhancedNodes :: [EnhancedNode a], enhancedOutput :: UnionM Val}
   deriving (Show, Generic)
   deriving (EvaluateSym) via (Default (EnhancedMiniProg a))
 
@@ -126,7 +143,7 @@ connected (EnhancedMiniProg enodes _) =
     outputs :: [(a, UnionM Val)]
     outputs =
       ( \case
-          EnhancedNode _ (vo, vov) _ -> (vo, mrgSingle $ Internal vov)
+          EnhancedNode _ (vo, vov) _ -> (vo, vov)
           InputNode vo vov -> (vo, mrgSingle $ Input $ mrgSingle vov)
       )
         <$> enodes
@@ -162,6 +179,7 @@ semanticsCorrect fm (EnhancedMiniProg enodes _) = go enodes
 
 miniProgWellFormedConstraints :: (UnionLike m, MonadError VerificationConditions m) => MiniProg -> m ()
 miniProgWellFormedConstraints prog = do
+--  lessProg prog
   acyclicProg prog
   noDuplicateOutputProg prog
 
@@ -184,12 +202,13 @@ interpretMiniProg inputs prog fm intermediateGen = do
   connected enhanced
   semanticsCorrect fm enhanced
   let outputs = getOutputs enhanced
-  v <- liftToMonadUnion $ enhancedOutput enhanced
-  mrgReturn $ outputs !! v
+  go outputs (enhancedOutput enhanced)
   where
     getOutputs (EnhancedMiniProg enodes _) =
       ( \case
-          EnhancedNode _ (vo, _) _ -> [vo]
+          EnhancedNode _ (vo, vr) _ -> [(vo, vr)]
           _ -> []
       )
         =<< enodes
+    go [] _ = throwError AssertionViolation
+    go ((xo,xr):xs) v = mrgIf (xr ==~ v) (mrgReturn xo) (go xs v)
