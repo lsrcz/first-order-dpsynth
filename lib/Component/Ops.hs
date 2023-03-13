@@ -19,6 +19,7 @@ funcMap :: (Num a, SOrd a, SimpleMergeable a) => FuncMap a
 funcMap =
   M.fromList
     [ ("id", unaryFunc mrgReturn),
+      ("zero", unaryFunc (const $ mrgReturn 0)),
       ("negate", unaryFunc $ mrgReturn . negate),
       ("+", binaryFunc $ \l r -> mrgReturn $ l + r),
       ("-", binaryFunc $ \l r -> mrgReturn $ l - r),

@@ -8,43 +8,74 @@ import GHC.Generics
 import GHC.Stack
 import Grisette
 import Debug.Trace
+import Common.Val
+import GHC.TypeLits
 
 genIntermediates :: (Monad m, UnionLike m, Mergeable a) => Int -> Int -> [a] -> m a -> m [[a]]
 genIntermediates num len inits intermediateGen = do
   v <- (traverse . traverse) (const intermediateGen) [[1 .. len] | _ <- [1 .. num]]
   mrgReturn $ uncurry (:) <$> zip inits v
 
-data Prog a = Prog [a] [MiniProg] MiniProg
+data Prog val a = Prog [a] [MiniProg val] (MiniProg val)
   deriving (Show, Generic)
-  deriving (EvaluateSym) via Default (Prog a)
+  deriving (EvaluateSym) via Default (Prog val a)
 
 data ProgSpec = ProgSpec [MiniProgSpec] MiniProgSpec
 
-instance GenSymSimple spec a => GenSymSimple (spec, ProgSpec) (Prog a) where
+instance GenSymSimple spec a => GenSymSimple (spec, ProgSpec) (Prog SymInteger a) where
   simpleFresh (spec, ProgSpec m p) = do
     i :: [a] <- simpleFresh (SimpleListSpec (length m) spec)
-    miniprogs :: [MiniProg] <- traverse simpleFresh m
+    miniprogs :: [MiniProg SymInteger] <- traverse simpleFresh m
+    finalprog <- simpleFresh p
+    return $ Prog i miniprogs finalprog
+ 
+instance (GenSymSimple spec a, KnownNat n, 1 <= n) => GenSymSimple (spec, ProgSpec) (Prog (SymIntN n) a) where
+  simpleFresh (spec, ProgSpec m p) = do
+    i :: [a] <- simpleFresh (SimpleListSpec (length m) spec)
+    miniprogs :: [MiniProg (SymIntN n)] <- traverse simpleFresh m
+    finalprog <- simpleFresh p
+    return $ Prog i miniprogs finalprog
+
+instance GenSymSimple spec a => GenSymSimple (spec, ProgSpec) (Prog (UnionM Val) a) where
+  simpleFresh (spec, ProgSpec m p) = do
+    i :: [a] <- simpleFresh (SimpleListSpec (length m) spec)
+    miniprogs :: [MiniProg (UnionM Val)] <- traverse simpleFresh m
     finalprog <- simpleFresh p
     return $ Prog i miniprogs finalprog
 
 data ProgSpecInit a = ProgSpecInit [a] [MiniProgSpec] MiniProgSpec
 
-instance GenSymSimple (ProgSpecInit a) (Prog a) where
+instance GenSymSimple (ProgSpecInit a) (Prog SymInteger a) where
   simpleFresh (ProgSpecInit i m p) = do
-    miniprogs :: [MiniProg] <- traverse simpleFresh m
+    miniprogs :: [MiniProg SymInteger] <- traverse simpleFresh m
+    finalprog <- simpleFresh p
+    return $ Prog i miniprogs finalprog
+
+instance (KnownNat n, 1 <= n) => GenSymSimple (ProgSpecInit a) (Prog (SymIntN n) a) where
+  simpleFresh (ProgSpecInit i m p) = do
+    miniprogs :: [MiniProg (SymIntN n)] <- traverse simpleFresh m
+    finalprog <- simpleFresh p
+    return $ Prog i miniprogs finalprog
+
+instance GenSymSimple (ProgSpecInit a) (Prog (UnionM Val) a) where
+  simpleFresh (ProgSpecInit i m p) = do
+    miniprogs :: [MiniProg val] <- traverse simpleFresh m
     finalprog <- simpleFresh p
     return $ Prog i miniprogs finalprog
 
 progWellFormedConstraints ::
-  (UnionLike m, MonadError VerificationConditions m) =>
-  Prog a ->
+  (ValLike val, UnionLike m, MonadError VerificationConditions m) =>
+  Int ->
+  Prog val a ->
   m ()
-progWellFormedConstraints (Prog _ miniprogs finalprog) =
-  mrgTraverse_ miniProgWellFormedConstraints (finalprog : miniprogs)
+progWellFormedConstraints numInputs (Prog internalInits miniprogs finalprog) = do
+  mrgTraverse_ (miniProgWellFormedConstraints (numInputs + length internalInits)) miniprogs
+  miniProgWellFormedConstraints (length internalInits) finalprog
 
 interpretProg ::
-  forall m a.
+  forall m val a.
   ( HasCallStack,
+    ValLike val,
     Show a,
     UnionLike m,
     MonadError VerificationConditions m,
@@ -55,7 +86,7 @@ interpretProg ::
     Mergeable a
   ) =>
   [[a]] ->
-  Prog a ->
+  Prog val a ->
   FuncMap a ->
   m a ->
   m a
@@ -65,11 +96,11 @@ interpretProg inputs (Prog inits miniprogs finalprog) fm intermediateGen = trace
   final <- go inputs intermediates miniprogs
   interpretMiniProg final finalprog fm intermediateGen
   where
-    go1 :: [a] -> [MiniProg] -> m [a]
+    go1 :: [a] -> [MiniProg val] -> m [a]
     go1 l =
       mrgTraverse (\p -> interpretMiniProg l p fm intermediateGen)
 
-    go :: [[a]] -> [[a]] -> [MiniProg] -> m [a]
+    go :: [[a]] -> [[a]] -> [MiniProg val] -> m [a]
     go inputs' intermediates' pg = do
       let progInputs = head <$> inputs'
       let progIntermediates = head <$> intermediates'

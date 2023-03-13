@@ -40,6 +40,7 @@ library
       Component.MiniProg
       Component.Ops
       Component.Prog
+      Component.QuickCheck
       Core
       Gen
       Interpreter
@@ -224,6 +225,9 @@ executable component
 executable mas
   main-is: Main.hs
   other-modules:
+      Component
+      MASSpec
+      OOPSLA
       Paths_first_order_dpsynth
   hs-source-dirs:
       mas
@@ -342,6 +346,10 @@ executable mis
 executable mmm
   main-is: Main.hs
   other-modules:
+      Bytecode
+      Component
+      MMMSpec
+      OOPSLA
       Paths_first_order_dpsynth
   hs-source-dirs:
       mmm
@@ -401,6 +409,9 @@ executable mmm
 executable mss
   main-is: Main.hs
   other-modules:
+      Component
+      MSSSpec
+      OOPSLA
       Paths_first_order_dpsynth
   hs-source-dirs:
       mss

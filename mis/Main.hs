@@ -21,8 +21,6 @@ import Timing
 import Bytecode.Prog
 import Bytecode.Instruction
 import Common.Val
-import Bytecode.Query
-import Bytecode.Ops
 
 mis :: (Num a) => ConProgram a
 mis =
@@ -90,7 +88,7 @@ safeMisSpecV = safeSpecV safeApply allBitStrings
 
 -- Component
 
-misComponentCProg :: Num a => CProg a
+misComponentCProg :: Num a => CProg CVal a
 misComponentCProg =
   CProg
     [0, 0]
@@ -107,7 +105,7 @@ misComponentProgSpec =
     ]
     (MiniProgSpec [ComponentSpec "max" 2] 2)
 
-misComponentProg :: (GenSymSimple () a, Num a) => Prog a
+misComponentProg :: (GenSymSimple () a, Num a) => Prog SymInteger a
 misComponentProg = genSymSimple ((), misComponentProgSpec) "prog"
 
 misComponentProgSpec1 :: ProgSpec
@@ -118,8 +116,12 @@ misComponentProgSpec1 =
     ]
     (MiniProgSpec [ComponentSpec "max" 2] 2)
 
-misComponentProg1 :: (GenSymSimple () a, Num a) => Prog a
+misComponentProg1 :: (GenSymSimple () a, Num a) => Prog SymInteger a
 misComponentProg1 = genSymSimple ((), misComponentProgSpec1) "prog"
+
+
+misComponentProg2 :: (GenSymSimple () a, Num a) => Prog (SymIntN 5) a
+misComponentProg2 = genSymSimple ((), misComponentProgSpec1) "prog"
 
 {-
 misComponentProg :: Num a => Prog a
@@ -180,27 +182,35 @@ main = do
 
   -- print i1
 
-  Right (_, r) <- timeItAll "cegis" $ cegisCustomized (precise z3) misSpec [[[]], [[a]], [[a,b]], [[a,b,c]], [[a,b,c,d]]] misComponentProg1 funcMap gen
-  -- print r
-  let x = evaluateSymToCon r (misComponentProg1 :: Prog SymInteger) :: CProg Integer
+  Right (_, x :: CProg (IntN 5) (IntN 4)) <- timeItAll "cegis" $ cegisCustomized (precise boolector) safeMisSpec [[[]], [["a" :: SymIntN 4]], [["a","b"]], [["a","b","c"]], [["a","b","c","d"]]] misComponentProg2 funcMap (simpleFresh ())
   print x
+
+{-
+  quickCheck
+    ( \(l :: [Integer]) ->
+        (interpretCProg [toSym l] x funcMap :: ExceptT VerificationConditions UnionM SymInteger)
+          == mrgReturn (toSym $ misAlgo l :: SymInteger)
+    )
+    -}
+
+
+
+  Right (_, x :: CProg Integer Integer) <- timeItAll "cegis" $ cegisCustomized (precise z3) misSpec [[[]], [[a]], [[a,b]], [[a,b,c]], [[a,b,c,d]]] misComponentProg1 funcMap gen
 
   quickCheck
     ( \(l :: [Integer]) ->
-        (interpretCProg [toSym l] (x :: CProg Integer) funcMap :: ExceptT VerificationConditions UnionM SymInteger)
+        (interpretCProg [toSym l] x funcMap :: ExceptT VerificationConditions UnionM SymInteger)
           == mrgReturn (toSym $ misAlgo l :: SymInteger)
     )
 
 
 
-  Right (_, r) <- timeItAll "cegis" $ cegisCustomized' (precise z3) misSpec [input] misComponentProg1 funcMap gen
-  -- print r
-  let x = evaluateSymToCon r (misComponentProg1 :: Prog SymInteger) :: CProg Integer
-  print x
+  Right (_, x :: CProg Integer Integer) <- timeItAll "cegis" $ cegisCustomized' (precise z3) misSpec [input] misComponentProg1 funcMap gen
+
 
   quickCheck
     ( \(l :: [Integer]) ->
-        (interpretCProg [toSym l] (x :: CProg Integer) funcMap :: ExceptT VerificationConditions UnionM SymInteger)
+        (interpretCProg [toSym l] x funcMap :: ExceptT VerificationConditions UnionM SymInteger)
           == mrgReturn (toSym $ misAlgo l :: SymInteger)
     )
 
@@ -212,11 +222,11 @@ main = do
         (interpretCProg [toSym l] (misComponentCProg :: CProg Integer) funcMap :: ExceptT VerificationConditions UnionM SymInteger)
           == mrgReturn (toSym $ misAlgo l :: SymInteger)
     )
-    -}
 
   let synthed :: ExceptT VerificationConditions UnionM SymInteger = interpretCProg [[1, 3, -4, 5, -6, 7]] (misComponentCProg :: CProg Integer) funcMap
   print synthed
   print (misAlgo [1, 3, -4, 5, -6, 7] :: Integer)
+    -}
 
   misIntSynthedExtV :: Maybe (ConProgram Integer) <-
     timeItAll "misextV" $ synth1V config availableUnary availableBinary () (const $ con True) (misSpecV @SymInteger) (misSketchExt (Proxy @Integer))

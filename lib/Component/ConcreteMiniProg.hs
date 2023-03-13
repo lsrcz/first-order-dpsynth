@@ -9,21 +9,19 @@ import GHC.Generics
 import Grisette
 import Common.Val
 
-data CNode = CNode B.ByteString CVal [CVal]
+data CNode cval = CNode B.ByteString cval [cval]
   deriving (Generic, Show)
-  deriving (ToCon Node) via (Default CNode)
+  deriving (ToCon (Node val)) via (Default (CNode cval))
 
-data CMiniProg = CMiniProg {cnodes :: [CNode], output :: CVal}
+data CMiniProg cval = CMiniProg {cnodes :: [CNode cval], output :: cval}
   deriving (Generic, Show)
-  deriving (ToCon MiniProg) via (Default CMiniProg)
+  deriving (ToCon (MiniProg val)) via (Default (CMiniProg cval))
 
-interpretCMiniProg :: (MonadUnion m, Mergeable a, MonadError VerificationConditions m) => [a] -> CMiniProg -> FuncMap a -> m a
+interpretCMiniProg :: (CValLike cval, MonadUnion m, Mergeable a, MonadError VerificationConditions m) => [a] -> CMiniProg cval -> FuncMap a -> m a
 interpretCMiniProg inputs (CMiniProg ns o) fm = go [] s
   where
-    s = sortBy (\(CNode _ (CInternal r1) _) (CNode _ (CInternal r2) _) -> compare r1 r2) ns
-    getNodeInputValue _ (CInput i) = inputs !! i
-    getNodeInputValue reg (CInternal i) = reg !! i
-    go reg [] = mrgReturn $ getNodeInputValue reg o
+    s = sortBy (\(CNode _ r1 _) (CNode _ r2 _) -> compare r1 r2) ns
+    go reg [] = mrgReturn $ getCVal inputs reg o
     go reg (CNode op _ nodeInputs : xs) = do
-      r <- case fm M.! op of Func f -> f $ getNodeInputValue reg <$> nodeInputs
+      r <- case fm M.! op of Func f -> f $ getCVal inputs reg <$> nodeInputs
       go (reg ++ [r]) xs

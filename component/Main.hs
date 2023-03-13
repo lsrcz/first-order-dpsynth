@@ -7,6 +7,7 @@ import Data.Maybe
 import Grisette
 import Common.Val
 
+{-
 progSpec1 :: MiniProgSpec
 progSpec1 =
   MiniProgSpec
@@ -135,3 +136,7 @@ main = return (){-do
   print $ evaluateSym False r prog2
 
 -}
+
+-}
+main :: IO ()
+main = return ()
