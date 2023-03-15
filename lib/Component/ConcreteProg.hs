@@ -1,12 +1,12 @@
 module Component.ConcreteProg where
 
+import Common.Val
 import Component.ConcreteMiniProg
 import Component.MiniProg
 import Component.Prog
 import Control.Monad.Except
 import GHC.Generics
 import Grisette
-import Common.Val
 
 data CProg cval c = CProg [c] [CMiniProg cval] (CMiniProg cval)
   deriving (Generic, Show)

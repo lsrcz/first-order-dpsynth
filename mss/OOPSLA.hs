@@ -4,10 +4,10 @@ import Core
 import Data.Proxy
 import Gen
 import Grisette
+import MSSSpec
 import Ops
 import Query
 import Timing
-import MSSSpec
 
 mss :: Num a => ConProgram a
 mss =

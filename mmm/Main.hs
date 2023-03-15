@@ -1,16 +1,13 @@
 module Main where
 
-
-import OOPSLA
 import Bytecode
 import Component
+import OOPSLA
 
 -- Component
-
 
 main :: IO ()
 main = do
   componentMain
   oopslaMain
   bytecodeMain
-

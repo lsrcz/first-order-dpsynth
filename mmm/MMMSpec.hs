@@ -1,7 +1,7 @@
 module MMMSpec where
 
-import Grisette
 import Control.Monad.Except
+import Grisette
 import Spec
 
 mmmAlgo :: forall a. (Num a, Ord a) => [a] -> a

@@ -42,7 +42,7 @@ interpretSketch ::
 interpretSketch u b sk = go (inits sk)
   where
     go :: [val] -> [[val]] -> ExceptT VerificationConditions UnionM val
-    go v (x:_) | null x = interpretIntAST u b v #~ terminate sk
+    go v (x : _) | null x = interpretIntAST u b v #~ terminate sk
     go v l = do
       r <-
         mrgTraverse

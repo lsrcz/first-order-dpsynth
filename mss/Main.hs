@@ -1,4 +1,5 @@
 module Main where
+
 import Component (componentMain)
 import OOPSLA (oopslaMain)
 

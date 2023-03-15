@@ -1,5 +1,6 @@
 module Component.CEGIS where
 
+import Common.Val
 import Component.ConcreteProg
 import Component.IntermediateVarSet
 import Component.MiniProg
@@ -7,14 +8,11 @@ import Component.Prog
 import Control.Monad.Except
 import Control.Monad.Writer
 import Data.Bifunctor
-import Data.Either
 import qualified Data.SBV as SBV
 import qualified Data.SBV.Control as SBVC
 import Grisette
 import Grisette.Backend.SBV.Data.SMT.Lowering
 import Timing
-import Common.Val
-import Debug.Trace
 
 sbvCheckSatResult :: SBVC.CheckSatResult -> SolvingFailure
 sbvCheckSatResult SBVC.Sat = error "Should not happen"
@@ -34,7 +32,7 @@ cegisCustomized' ::
   FuncMap a ->
   M a ->
   IO (Either SolvingFailure ([[[a]]], CProg cval c))
-cegisCustomized' config spec inputs prog funcMap gen = SBV.runSMTWith (sbvConfig config) $ do
+cegisCustomized' config spec inputs prog funcMap gen = SBV.runSMTWith ((sbvConfig config) {transcript = Just "guess.smt2"}) $ do
   let SymBool t = {-phiRight &&~-} wellFormed
   (newm, a) <- lowerSinglePrim config t
   SBVC.query $
@@ -55,7 +53,7 @@ cegisCustomized' config spec inputs prog funcMap gen = SBV.runSMTWith (sbvConfig
     wellFormed = simpleMerge $ do
       v <-
         runExceptT
-          (progWellFormedConstraints (length inputs) prog :: ExceptT VerificationConditions UnionM ())
+          (progWellFormedConstraints (length inputs) funcMap prog :: ExceptT VerificationConditions UnionM ())
       return $ case v of
         Left _ -> con False
         Right _ -> con True
@@ -69,11 +67,11 @@ cegisCustomized' config spec inputs prog funcMap gen = SBV.runSMTWith (sbvConfig
       x <- runExceptT $ fst $ f idx i
       return $ x ==~ Right o
 
-{-
-    phiRight = simpleMerge $ do
-      v <- runExceptT e0
-      con $ isRight v
-      -}
+    {-
+        phiRight = simpleMerge $ do
+          v <- runExceptT e0
+          con $ isRight v
+          -}
 
     check :: Model -> IO (Either SolvingFailure ([[a]], a))
     check candidate = do
@@ -131,7 +129,7 @@ cegisCustomized' config spec inputs prog funcMap gen = SBV.runSMTWith (sbvConfig
 
 cegisCustomized ::
   forall n cval val a c.
-  (ValLike val, CValLike cval, ToCon a c, EvaluateSym val, ToCon val cval, ExtractSymbolics a, EvaluateSym a, Mergeable a, SEq a, Show a, ToSym a a, ToCon a a) =>
+  (ValLike val, Show cval, CValLike cval, ToCon a c, EvaluateSym val, ToCon val cval, ExtractSymbolics a, EvaluateSym a, Mergeable a, SEq a, Show a, ToSym a a, ToCon a a) =>
   GrisetteSMTConfig n ->
   ([[a]] -> ExceptT VerificationConditions UnionM a) ->
   [[[a]]] ->
@@ -139,7 +137,7 @@ cegisCustomized ::
   FuncMap a ->
   M a ->
   IO (Either SolvingFailure ([[[a]]], CProg cval c))
-cegisCustomized config spec inputs prog funcMap gen = SBV.runSMTWith (sbvConfig config) $ do
+cegisCustomized config spec inputs prog funcMap gen = SBV.runSMTWith (sbvConfig config) {transcript = Just "guess.smt2"} $ do
   let SymBool t = wellFormed
   (newm, a) <- lowerSinglePrim config t
   SBVC.query $
@@ -160,7 +158,7 @@ cegisCustomized config spec inputs prog funcMap gen = SBV.runSMTWith (sbvConfig 
     wellFormed = simpleMerge $ do
       v <-
         runExceptT
-          (progWellFormedConstraints (length (head inputs)) prog :: ExceptT VerificationConditions UnionM ())
+          (progWellFormedConstraints (length (head inputs)) funcMap prog :: ExceptT VerificationConditions UnionM ())
       return $ case v of
         Left _ -> con False
         Right _ -> con True
@@ -175,7 +173,7 @@ cegisCustomized config spec inputs prog funcMap gen = SBV.runSMTWith (sbvConfig 
 
     check :: [[[a]]] -> Model -> IO (Either SolvingFailure ([[a]], [[[a]]], a))
     check [] _ = return (Left Unsat)
-    check (nextInput:remainingInputs) candidate = do
+    check (nextInput : remainingInputs) candidate = do
       let evaluated :: CProg cval a = evaluateSymToCon candidate prog
       let evr :: ExceptT VerificationConditions UnionM a = interpretCProg nextInput evaluated funcMap
       let spr :: ExceptT VerificationConditions UnionM a = spec nextInput
@@ -199,7 +197,7 @@ cegisCustomized config spec inputs prog funcMap gen = SBV.runSMTWith (sbvConfig 
           let spre = evaluateSym True newm spr
           case spre of
             ExceptT (SingleU (Right v)) -> do
-              return $ Right (evaluateSym True newm nextInput, nextInput:remainingInputs, v)
+              return $ Right (evaluateSym True newm nextInput, nextInput : remainingInputs, v)
             _ -> error "Bad"
 
     guess :: Int -> [[a]] -> a -> SymBiMap -> SBVC.Query (SymBiMap, Either SolvingFailure Model)

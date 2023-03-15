@@ -1,7 +1,7 @@
 module MASSpec where
 
-import Grisette
 import Control.Monad.Except
+import Grisette
 import Spec
 
 masAlgo :: (Num a, Ord a) => [a] -> a
@@ -20,18 +20,17 @@ isConsecutive0begin (_ : _) = undefined
 
 isAlternative1 :: [Int] -> Bool
 isAlternative1 [] = True
-isAlternative1 (0:xs) = isConsecutive0 xs
-isAlternative1 (1:xs) = isAlternativem1 xs
-isAlternative1 (-1:_) = False
+isAlternative1 (0 : xs) = isConsecutive0 xs
+isAlternative1 (1 : xs) = isAlternativem1 xs
+isAlternative1 (-1 : _) = False
 isAlternative1 (_ : _) = undefined
 
 isAlternativem1 :: [Int] -> Bool
 isAlternativem1 [] = True
-isAlternativem1 (0:xs) = isConsecutive0 xs
-isAlternativem1 (-1:xs) = isAlternative1 xs
-isAlternativem1 (1:_) = False
+isAlternativem1 (0 : xs) = isConsecutive0 xs
+isAlternativem1 (-1 : xs) = isAlternative1 xs
+isAlternativem1 (1 : _) = False
 isAlternativem1 (_ : _) = undefined
-
 
 isConsecutive0 :: [Int] -> Bool
 isConsecutive0 [] = True

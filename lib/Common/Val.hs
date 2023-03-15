@@ -1,8 +1,9 @@
 module Common.Val where
-import Grisette
-import GHC.Generics
+
 import Control.Monad.Except
+import GHC.Generics
 import GHC.TypeLits
+import Grisette
 
 data Val
   = Input (UnionM Int)
@@ -10,7 +11,7 @@ data Val
   deriving (Generic, Show)
   deriving (Mergeable, SEq, SOrd, EvaluateSym, ToSym CVal) via (Default Val)
 
-data ValSpec = ValSpec { valInputNum :: Int, valInternalNum :: Int}
+data ValSpec = ValSpec {valInputNum :: Int, valInternalNum :: Int}
 
 data CVal
   = CInput Int
@@ -21,12 +22,12 @@ data CVal
 instance GenSym ValSpec Val where
   fresh (ValSpec ninput ninternal)
     | ninternal <= 0 = do
-      i <- fresh (EnumGenBound 0 ninput)
-      return $ mrgReturn $ Input i
+        i <- fresh (EnumGenBound 0 ninput)
+        return $ mrgReturn $ Input i
     | otherwise = do
-      inputs <- fresh (EnumGenBound 0 ninput)
-      internals <- fresh (EnumGenBound 0 ninternal)
-      chooseFresh [Input inputs, Internal internals]
+        inputs <- fresh (EnumGenBound 0 ninput)
+        internals <- fresh (EnumGenBound 0 ninternal)
+        chooseFresh [Input inputs, Internal internals]
 
 newtype ChooseSpec l = ChooseSpec [l]
 
@@ -54,7 +55,7 @@ instance ValLike Val where
     Internal i -> liftToMonadUnion i >>= gi internals
     where
       gi l r | r < length l = mrgReturn (l !! r)
-      gi _ _ = throwError AssertionViolation 
+      gi _ _ = throwError AssertionViolation
 
 instance (ValLike v, Mergeable v) => ValLike (UnionM v) where
   eqVal l r = simpleMerge $ do
@@ -70,7 +71,7 @@ instance (ValLike v, Mergeable v) => ValLike (UnionM v) where
   internalVal numInputs v = mrgSingle $ internalVal numInputs v
   getVal inputs internals v = liftToMonadUnion v >>= getVal inputs internals
 
-class Ord v => CValLike v where
+class (Show v, Ord v) => CValLike v where
   getCVal :: [l] -> [l] -> v -> l
 
 instance CValLike CVal where
@@ -87,10 +88,10 @@ instance ValLike SymInteger where
     where
       go _ [] [] _ = undefined
       go _ [] [x] _ = mrgReturn x
-      go n [] (x:xs) v = mrgIf (eqVal n v) (mrgReturn x) (go (n + 1) [] xs v)
+      go n [] (x : xs) v = mrgIf (eqVal n v) (mrgReturn x) (go (n + 1) [] xs v)
       go _ [x] [] _ = mrgReturn x
       go n [x] internals' v = mrgIf (eqVal n v) (mrgReturn x) (go (n + 1) [] internals' v)
-      go n (x:xs) internals' v = mrgIf (eqVal n v) (mrgReturn x) (go (n + 1) xs internals' v)
+      go n (x : xs) internals' v = mrgIf (eqVal n v) (mrgReturn x) (go (n + 1) xs internals' v)
 
 instance CValLike Integer where
   getCVal inputs reg i = (inputs ++ reg) !! fromIntegral i
@@ -105,11 +106,10 @@ instance (KnownNat n, 1 <= n) => ValLike (SymIntN n) where
     where
       go _ [] [] _ = undefined
       go _ [] [x] _ = mrgReturn x
-      go n [] (x:xs) v = mrgIf (eqVal n v) (mrgReturn x) (go (n + 1) [] xs v)
+      go n [] (x : xs) v = mrgIf (eqVal n v) (mrgReturn x) (go (n + 1) [] xs v)
       go _ [x] [] _ = mrgReturn x
       go n [x] internals' v = mrgIf (eqVal n v) (mrgReturn x) (go (n + 1) [] internals' v)
-      go n (x:xs) internals' v = mrgIf (eqVal n v) (mrgReturn x) (go (n + 1) xs internals' v)
+      go n (x : xs) internals' v = mrgIf (eqVal n v) (mrgReturn x) (go (n + 1) xs internals' v)
 
 instance (KnownNat n, 1 <= n) => CValLike (IntN n) where
   getCVal inputs reg i = (inputs ++ reg) !! fromIntegral i
-

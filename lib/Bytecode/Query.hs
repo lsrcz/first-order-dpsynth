@@ -1,10 +1,11 @@
 module Bytecode.Query where
-import Grisette
+
 import Bytecode.Instruction
-import Control.Monad.Except
 import Bytecode.Prog
+import Control.Monad.Except
 import Data.Hashable
 import Data.Maybe
+import Grisette
 import Timing
 
 bytecodeSynthV ::
@@ -83,6 +84,7 @@ bytecodeVerifyV config fm inputs output inputSpace spec sketch = do
   case m of
     Left _ -> return Nothing
     Right mo -> return $ Just (fmap (fromJust . toCon) <$> evaluateSym True mo inputs)
+
 {-
 verify ::
   (ExtractSymbolics val, SimpleMergeable val, SEq val, ToCon val cval, EvaluateSym val, Eq val, Hashable val) =>

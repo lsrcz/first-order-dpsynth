@@ -8,13 +8,13 @@ import Grisette
 bytecodeUnaryFunc :: (forall m. (MonadError VerificationConditions m, MonadUnion m, Mergeable a) => a -> m a) -> Func a
 bytecodeUnaryFunc f = Func $ \case
   [] -> mrgThrowError AssertionViolation
-  (a:_) -> f a
+  (a : _) -> f a
 
 bytecodeBinaryFunc :: (forall m. (MonadError VerificationConditions m, MonadUnion m, Mergeable a) => a -> a -> m a) -> Func a
 bytecodeBinaryFunc f = Func $ \case
   [] -> mrgThrowError AssertionViolation
   [_] -> mrgThrowError AssertionViolation
-  (a: b:_) -> f a b
+  (a : b : _) -> f a b
 
 bytecodeFuncMap :: (Num a, SOrd a, SimpleMergeable a) => FuncMap a
 bytecodeFuncMap =
@@ -26,4 +26,3 @@ bytecodeFuncMap =
       ("max", bytecodeBinaryFunc $ \l r -> mrgReturn $ mrgIte (l >=~ r) l r),
       ("min", bytecodeBinaryFunc $ \l r -> mrgReturn $ mrgIte (l >=~ r) r l)
     ]
-

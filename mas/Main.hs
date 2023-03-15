@@ -1,7 +1,7 @@
 module Main where
 
-import OOPSLA (oopslaMain)
 import Component (componentMain)
+import OOPSLA (oopslaMain)
 
 main :: IO ()
 main = do

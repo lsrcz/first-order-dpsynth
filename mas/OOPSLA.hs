@@ -1,14 +1,15 @@
 module OOPSLA where
+
 import Core
-import Grisette
+import Data.Proxy
 import Gen
-import Ops
-import Query
-import Timing
-import Test.QuickCheck
+import Grisette
 import Interpreter
 import MASSpec
-import Data.Proxy
+import Ops
+import Query
+import Test.QuickCheck
+import Timing
 
 mas :: Num a => ConProgram a
 mas =

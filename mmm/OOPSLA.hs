@@ -1,12 +1,13 @@
 module OOPSLA where
+
 import Core
-import Grisette
-import Gen
-import Timing
-import Query
-import Ops
-import MMMSpec
 import Data.Proxy
+import Gen
+import Grisette
+import MMMSpec
+import Ops
+import Query
+import Timing
 
 mmm :: Num a => ConProgram a
 mmm =
@@ -49,4 +50,3 @@ oopslaMain = do
   mmmIntSynthedCombV :: Maybe (ConProgram Integer) <-
     timeItAll "mmmcombV" $ synth1V config availableUnary availableBinary () (const $ con True) (mmmSpecV @SymInteger) (mmmSketchComb (Proxy @Integer))
   print mmmIntSynthedCombV
-

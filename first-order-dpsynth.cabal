@@ -107,6 +107,9 @@ library
 executable assem
   main-is: Main.hs
   other-modules:
+      ASSEMSpec
+      Component
+      OOPSLA
       Paths_first_order_dpsynth
   hs-source-dirs:
       assem

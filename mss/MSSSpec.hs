@@ -1,7 +1,8 @@
 module MSSSpec where
+
+import Control.Monad.Except
 import GHC.Stack
 import Grisette
-import Control.Monad.Except
 import Spec
 
 mssAlgo :: (Num a, Ord a) => [a] -> a

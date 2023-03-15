@@ -1,15 +1,14 @@
 module Component.Prog where
 
+import Common.Val
 import Component.IntermediateVarSet
 import Component.MiniProg
 import Control.Monad.Except
 import Control.Monad.Writer
 import GHC.Generics
 import GHC.Stack
-import Grisette
-import Debug.Trace
-import Common.Val
 import GHC.TypeLits
+import Grisette
 
 genIntermediates :: (Monad m, UnionLike m, Mergeable a) => Int -> Int -> [a] -> m a -> m [[a]]
 genIntermediates num len inits intermediateGen = do
@@ -28,7 +27,7 @@ instance GenSymSimple spec a => GenSymSimple (spec, ProgSpec) (Prog SymInteger a
     miniprogs :: [MiniProg SymInteger] <- traverse simpleFresh m
     finalprog <- simpleFresh p
     return $ Prog i miniprogs finalprog
- 
+
 instance (GenSymSimple spec a, KnownNat n, 1 <= n) => GenSymSimple (spec, ProgSpec) (Prog (SymIntN n) a) where
   simpleFresh (spec, ProgSpec m p) = do
     i :: [a] <- simpleFresh (SimpleListSpec (length m) spec)
@@ -66,11 +65,12 @@ instance GenSymSimple (ProgSpecInit a) (Prog (UnionM Val) a) where
 progWellFormedConstraints ::
   (ValLike val, UnionLike m, MonadError VerificationConditions m) =>
   Int ->
+  FuncMap a ->
   Prog val a ->
   m ()
-progWellFormedConstraints numInputs (Prog internalInits miniprogs finalprog) = do
-  mrgTraverse_ (miniProgWellFormedConstraints (numInputs + length internalInits)) miniprogs
-  miniProgWellFormedConstraints (length internalInits) finalprog
+progWellFormedConstraints numInputs fm (Prog internalInits miniprogs finalprog) = do
+  mrgTraverse_ (miniProgWellFormedConstraints (numInputs + length internalInits) fm) miniprogs
+  miniProgWellFormedConstraints (length internalInits) fm finalprog
 
 interpretProg ::
   forall m val a.
@@ -90,11 +90,12 @@ interpretProg ::
   FuncMap a ->
   m a ->
   m a
-interpretProg inputs (Prog inits miniprogs finalprog) fm intermediateGen = trace (show inputs) $ do
+interpretProg inputs (Prog inits miniprogs finalprog) fm intermediateGen = do
   -- Env intermediates :: Env a <- simpleFresh (GenEnvSpec inputs inits spec (length miniprogs))
   intermediates <- genIntermediates (length inits) (length (head inputs)) inits intermediateGen
   final <- go inputs intermediates miniprogs
-  interpretMiniProg final finalprog fm intermediateGen
+  r <- interpretMiniProg final finalprog fm intermediateGen
+  mrgReturn r
   where
     go1 :: [a] -> [MiniProg val] -> m [a]
     go1 l =

@@ -1,8 +1,9 @@
 module Bytecode.Prog where
+
 import Bytecode.Instruction
+import Control.Monad.Except
 import GHC.Generics
 import Grisette
-import Control.Monad.Except
 
 data BytecodeProg a = BytecodeProg [a] [Bytecode] Bytecode
   deriving (Show, Generic)
@@ -11,11 +12,15 @@ data BytecodeProg a = BytecodeProg [a] [Bytecode] Bytecode
 data CBytecodeProg a = CBytecodeProg [a] [CBytecode] CBytecode
   deriving (Show, Generic)
 
-deriving via (Default (CBytecodeProg c))
-  instance ToCon s c => ToCon (BytecodeProg s) (CBytecodeProg c)
+deriving via
+  (Default (CBytecodeProg c))
+  instance
+    ToCon s c => ToCon (BytecodeProg s) (CBytecodeProg c)
 
-deriving via (Default (BytecodeProg s))
-  instance ToSym c s => ToSym (CBytecodeProg c) (BytecodeProg s) 
+deriving via
+  (Default (BytecodeProg s))
+  instance
+    ToSym c s => ToSym (CBytecodeProg c) (BytecodeProg s)
 
 data BytecodeProgSpec spec = BytecodeProgSpec spec [BytecodeSpec] BytecodeSpec
 
@@ -23,26 +28,30 @@ data GroupedBytecodeProgSpec spec = GroupedBytecodeProgSpec spec [GroupedBytecod
 
 instance GenSymSimple spec a => GenSymSimple (BytecodeProgSpec spec) (BytecodeProg a) where
   simpleFresh (BytecodeProgSpec s b f) = do
-    inits <- traverse (const $ simpleFresh s) [0..length b - 1]
+    inits <- traverse (const $ simpleFresh s) [0 .. length b - 1]
     updates <- traverse simpleFresh b
     final <- simpleFresh f
     return $ BytecodeProg inits updates final
 
 instance GenSymSimple spec a => GenSymSimple (GroupedBytecodeProgSpec spec) (BytecodeProg a) where
   simpleFresh (GroupedBytecodeProgSpec s b f) = do
-    inits <- traverse (const $ simpleFresh s) [0..length b - 1]
+    inits <- traverse (const $ simpleFresh s) [0 .. length b - 1]
     updates <- traverse simpleFresh b
     final <- simpleFresh f
     return $ BytecodeProg inits updates final
 
 interpretBytecodeProg ::
-  forall m a. (MonadError VerificationConditions m, MonadUnion m, SimpleMergeable a) =>
-  [[a]] -> BytecodeProg a -> FuncMap a -> m a
+  forall m a.
+  (MonadError VerificationConditions m, MonadUnion m, SimpleMergeable a) =>
+  [[a]] ->
+  BytecodeProg a ->
+  FuncMap a ->
+  m a
 interpretBytecodeProg inputs (BytecodeProg inits codes finalcode) fm = do
   finalIntermediate <- go inputs inits
   interpretBytecode finalIntermediate finalcode fm
   where
-    go ([]:_) currIntermediate = mrgReturn currIntermediate
+    go ([] : _) currIntermediate = mrgReturn currIntermediate
     go currInputs currIntermediate = do
       nextIntermediate <- mrgTraverse (go1 currInputs currIntermediate) codes
       go (tail <$> currInputs) nextIntermediate

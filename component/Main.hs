@@ -1,11 +1,11 @@
 module Main where
 
+import Common.Val
 import Component.CEGIS
 import Component.ConcreteMiniProg
 import Component.MiniProg
 import Data.Maybe
 import Grisette
-import Common.Val
 
 {-
 progSpec1 :: MiniProgSpec

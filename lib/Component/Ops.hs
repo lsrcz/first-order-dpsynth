@@ -6,12 +6,12 @@ import qualified Data.HashMap.Strict as M
 import Grisette
 
 unaryFunc :: (forall m. (MonadError VerificationConditions m, MonadUnion m, Mergeable a) => a -> m a) -> Func a
-unaryFunc f = Func $ \case
+unaryFunc f = Func 1 False $ \case
   [a] -> f a
   _ -> mrgThrowError AssertionViolation
 
-binaryFunc :: (forall m. (MonadError VerificationConditions m, MonadUnion m, Mergeable a) => a -> a -> m a) -> Func a
-binaryFunc f = Func $ \case
+binaryFunc :: Bool -> (forall m. (MonadError VerificationConditions m, MonadUnion m, Mergeable a) => a -> a -> m a) -> Func a
+binaryFunc comm f = Func 2 comm $ \case
   [a, b] -> f a b
   _ -> mrgThrowError AssertionViolation
 
@@ -21,8 +21,8 @@ funcMap =
     [ ("id", unaryFunc mrgReturn),
       ("zero", unaryFunc (const $ mrgReturn 0)),
       ("negate", unaryFunc $ mrgReturn . negate),
-      ("+", binaryFunc $ \l r -> mrgReturn $ l + r),
-      ("-", binaryFunc $ \l r -> mrgReturn $ l - r),
-      ("max", binaryFunc $ \l r -> mrgReturn $ mrgIte (l >=~ r) l r),
-      ("min", binaryFunc $ \l r -> mrgReturn $ mrgIte (l >=~ r) r l)
+      ("+", binaryFunc True $ \l r -> mrgReturn $ l + r),
+      ("-", binaryFunc False $ \l r -> mrgReturn $ l - r),
+      ("max", binaryFunc True $ \l r -> mrgReturn $ mrgIte (l >=~ r) l r),
+      ("min", binaryFunc True $ \l r -> mrgReturn $ mrgIte (l >=~ r) r l)
     ]

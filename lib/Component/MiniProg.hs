@@ -1,28 +1,29 @@
 module Component.MiniProg where
 
+import Common.Val
 import Component.IntermediateVarSet
 import Control.Monad.Except
 import Control.Monad.Writer
 import qualified Data.ByteString as B
 import qualified Data.HashMap.Strict as M
 import GHC.Generics
-import Grisette
-import Common.Val
 import GHC.TypeLits
+import Grisette
 
 data Node val
   = Node B.ByteString val [val]
   deriving (Generic, Show)
   deriving (Mergeable, SEq, EvaluateSym) via (Default (Node val))
 
-nodeOutputIdx :: Node val -> val 
+nodeOutputIdx :: Node val -> val
 nodeOutputIdx (Node _ o _) = o
 
 data MiniProg val = MiniProg {nodes :: [Node val], output :: val}
   deriving (Generic, Show)
   deriving (EvaluateSym, SEq) via (Default (MiniProg val))
 
-data ComponentSpec = ComponentSpec {componentOp :: B.ByteString, componentInput :: Int}
+data ComponentSpec
+  = ComponentSpec {componentOp :: B.ByteString, componentInput :: Int}
   | RestrictedSpec {rcomponentOp :: B.ByteString, rcomponentInput :: Int, routputs :: Maybe [Int], rinputs :: Maybe [Val]}
 
 data NodeSpec = NodeSpec {componentInfo :: ComponentSpec, globalInputNum :: Int, globalSlotNum :: Int}
@@ -49,7 +50,7 @@ instance GenSymSimple NodeSpec (Node (UnionM Val)) where
     i <- simpleFresh (SimpleListSpec ii (ValSpec gi si))
     return $ Node op (mrgReturn $ Internal o) i
   simpleFresh (NodeSpec (RestrictedSpec op ii ro ri) gi si) = do
-    o <- case ro of Nothing -> chooseFresh [0..si-1]; Just r -> chooseFresh r
+    o <- case ro of Nothing -> chooseFresh [0 .. si - 1]; Just r -> chooseFresh r
     i <- case ri of Nothing -> simpleFresh (SimpleListSpec ii (ValSpec gi si)); Just r -> simpleFresh (SimpleListSpec ii (ChooseSpec r))
     return $ Node op (mrgReturn $ Internal o) i
 
@@ -81,7 +82,7 @@ boundProg numInputs p = go (nodes p)
       go1 vis
       go vs
     go1 [] = mrgReturn ()
-    go1 (x:xs) = do
+    go1 (x : xs) = do
       symAssert (boundVal (inputVal 0) (internalVal numInputs numSlots) x)
       go1 xs
 
@@ -96,6 +97,15 @@ acyclicProg p = go (nodes p)
     go1 vo (vi : vis) = do
       symAssert (ltVal vi vo)
       go1 vo vis
+
+binarySymmReduction :: (ValLike val, MonadUnion m, MonadError VerificationConditions m) => FuncMap a -> MiniProg val -> m ()
+binarySymmReduction fm p = go (nodes p)
+  where
+    go [] = mrgReturn ()
+    go (Node op _ vis : vs) = do
+      let Func nop comm _ = fm M.! op
+      when (nop == 2 && comm) $ symAssert (leVal (head vis) (vis !! 1))
+      go vs
 
 noDuplicateOutputProg :: (ValLike val, MonadUnion m, MonadError VerificationConditions m) => MiniProg val -> m ()
 noDuplicateOutputProg p = go (nodes p)
@@ -180,7 +190,7 @@ connected (EnhancedMiniProg enodes _) =
         =<< enodes
 
 data Func a where
-  Func :: (forall m. (MonadError VerificationConditions m, MonadUnion m, Mergeable a) => [a] -> m a) -> Func a
+  Func :: Int -> Bool -> (forall m. (MonadError VerificationConditions m, MonadUnion m, Mergeable a) => [a] -> m a) -> Func a
 
 type Op = B.ByteString
 
@@ -189,7 +199,7 @@ type FuncMap a = M.HashMap Op (Func a)
 interpretOp :: (MonadError VerificationConditions m, MonadUnion m, Mergeable a) => Op -> FuncMap a -> [a] -> m a
 interpretOp op fm args = case M.lookup op fm of
   Nothing -> mrgThrowError AssertionViolation
-  Just (Func func) -> func args
+  Just (Func _ _ func) -> func args
 
 semanticsCorrect :: (MonadUnion m, MonadError VerificationConditions m, SEq a, Mergeable a) => FuncMap a -> EnhancedMiniProg val a -> m ()
 semanticsCorrect fm (EnhancedMiniProg enodes _) = go enodes
@@ -201,9 +211,10 @@ semanticsCorrect fm (EnhancedMiniProg enodes _) = go enodes
       symAssert (interpretRes ==~ o)
       go xs
 
-miniProgWellFormedConstraints :: (ValLike val, UnionLike m, MonadError VerificationConditions m) => Int -> MiniProg val -> m ()
-miniProgWellFormedConstraints numInputs prog = do
---  lessProg prog
+miniProgWellFormedConstraints :: (ValLike val, UnionLike m, MonadError VerificationConditions m) => Int -> FuncMap a -> MiniProg val -> m ()
+miniProgWellFormedConstraints numInputs fm prog = do
+  --  lessProg prog
+  binarySymmReduction fm prog
   boundProg numInputs prog
   acyclicProg prog
   noDuplicateOutputProg prog
@@ -237,4 +248,4 @@ interpretMiniProg inputs prog fm intermediateGen = do
       )
         =<< enodes
     go [] _ = throwError AssertionViolation
-    go ((xo,xr):xs) v = mrgIf (eqVal xr v) (mrgReturn xo) (go xs v)
+    go ((xo, xr) : xs) v = mrgIf (eqVal xr v) (mrgReturn xo) (go xs v)

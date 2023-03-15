@@ -1,5 +1,6 @@
 module Component where
 
+import Component.CEGIS
 import Component.ConcreteMiniProg
 import Component.ConcreteProg
 import Component.MiniProg
@@ -12,7 +13,6 @@ import Grisette
 import MASSpec
 import Spec
 import Timing
-import Component.CEGIS
 
 masComponentCProg :: Num a => CProg Integer a
 masComponentCProg =
@@ -73,8 +73,11 @@ masComponentProgSpec =
 masComponentProg :: forall a. (Num a) => Prog (SymIntN 5) a
 masComponentProg = genSymSimple (masComponentProgSpec :: ProgSpecInit a) "prog"
 
-restrictedMasSpec :: forall a e. (Show a, Num a, SOrd a, SimpleMergeable a, SafeLinearArith e a) =>
-  [[a]] -> ExceptT VerificationConditions UnionM a
+restrictedMasSpec ::
+  forall a e.
+  (Show a, Num a, SOrd a, SimpleMergeable a, SafeLinearArith e a) =>
+  [[a]] ->
+  ExceptT VerificationConditions UnionM a
 restrictedMasSpec l = do
   mrgTraverse_ (\x -> symAssume $ x >=~ -8 &&~ x <=~ 8) $ join l
   spec apply allBitStrings l
@@ -85,7 +88,7 @@ componentMain = do
   let configb = precise boolector {Grisette.transcript = Just "b.smt2"}
   qcComponent (Proxy @SymInteger) 17 8 8 masAlgo masComponentCProg
 
-  Right (_, x :: CProg (IntN 5) (IntN 8)) <- timeItAll "cegis" $ cegisCustomized configb restrictedMasSpec [[[]], [["a" :: SymIntN 8]], [["a","b"]], [["a","b","c"]], [["a","b","c","d"]]] masComponentProg funcMap (simpleFresh ()) 
+  Right (_, x :: CProg (IntN 5) (IntN 8)) <- timeItAll "cegis" $ cegisCustomized configb restrictedMasSpec [[[]], [["a" :: SymIntN 8]], [["a", "b"]], [["a", "b", "c"]], [["a", "b", "c", "d"]]] masComponentProg funcMap (simpleFresh ())
   print x
 
   qcComponent (Proxy @(SymIntN 8)) 17 8 8 masAlgo x
