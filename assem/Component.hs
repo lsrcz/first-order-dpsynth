@@ -47,20 +47,30 @@ assemComponentProgSpec =
     [ MiniProgSpec
         [ ComponentSpec "+" 2,
           ComponentSpec "+" 2,
-          ComponentSpec "min" 2
-        ]
-        6,
-      MiniProgSpec
-        [ ComponentSpec "+" 2,
-          ComponentSpec "+" 2,
+          ComponentSpec "-" 2,
+          ComponentSpec "-" 2,
           ComponentSpec "min" 2
         ]
         6
+        2,
+      MiniProgSpec
+        [ ComponentSpec "+" 2,
+          ComponentSpec "+" 2,
+          ComponentSpec "-" 2,
+          ComponentSpec "-" 2,
+          ComponentSpec "min" 2
+        ]
+        6
+        2
     ]
     ( MiniProgSpec
         [ComponentSpec "min" 2]
         2
+        0
     )
+
+assemComponentProg :: forall a. (Num a) => Prog (SymIntN 5) a
+assemComponentProg = genSymSimple (assemComponentProgSpec :: ProgSpecInit a) "prog"
 
 assemComponentProgSpec' :: Num a => ProgSpecInit a
 assemComponentProgSpec' =
@@ -69,29 +79,29 @@ assemComponentProgSpec' =
     [ MiniProgSpec
         [ ComponentSpec "+" 2,
           ComponentSpec "+" 2,
-          ComponentSpec "+" 2,
-          ComponentSpec "+" 2,
+          ComponentSpec "-" 2,
+          ComponentSpec "-" 2,
           ComponentSpec "min" 2,
-          ComponentSpec "min" 2
+          ComponentSpec "max" 2
         ]
-        6,
+        6
+        2,
       MiniProgSpec
         [ ComponentSpec "+" 2,
           ComponentSpec "+" 2,
-          ComponentSpec "+" 2,
-          ComponentSpec "+" 2,
+          ComponentSpec "-" 2,
+          ComponentSpec "-" 2,
           ComponentSpec "min" 2,
-          ComponentSpec "min" 2
+          ComponentSpec "max" 2
         ]
         6
+        2
     ]
     ( MiniProgSpec
         [ComponentSpec "min" 2]
         2
+        0
     )
-
-assemComponentProg :: forall a. (Num a) => Prog (SymIntN 5) a
-assemComponentProg = genSymSimple (assemComponentProgSpec :: ProgSpecInit a) "prog"
 
 assemComponentProg' :: forall a. (Num a) => Prog (SymIntN 5) a
 assemComponentProg' = genSymSimple (assemComponentProgSpec' :: ProgSpecInit a) "prog"
@@ -129,7 +139,7 @@ componentMain = do
         4
         (assemInputsGen (-8, 8))
         4
-        assemComponentProg
+        assemComponentProg'
         funcMap
         (simpleFresh ())
   print x

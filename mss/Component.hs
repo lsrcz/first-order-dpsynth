@@ -45,13 +45,15 @@ mssComponentProgSpec =
           ComponentSpec "max" 2,
           ComponentSpec "+" 2
         ]
-        3,
+        3
+        2,
       MiniProgSpec
         [ ComponentSpec "max" 2
         ]
         3
+        0
     ]
-    (MiniProgSpec [ComponentSpec "max" 2] 2)
+    (MiniProgSpec [ComponentSpec "max" 2] 2 0)
 
 mssComponentProgSpec' :: Num a => ProgSpecInit a
 mssComponentProgSpec' =
@@ -64,7 +66,8 @@ mssComponentProgSpec' =
           ComponentSpec "max" 2,
           ComponentSpec "+" 2
         ]
-        3,
+        3
+        2,
       MiniProgSpec
         [ ComponentSpec "zero" 1,
           ComponentSpec "max" 2,
@@ -73,8 +76,9 @@ mssComponentProgSpec' =
           ComponentSpec "+" 2
         ]
         3
+        0
     ]
-    (MiniProgSpec [ComponentSpec "max" 2] 2)
+    (MiniProgSpec [ComponentSpec "max" 2] 2 0)
 
 mssComponentProg :: forall a. (Num a) => Prog (SymIntN 5) a
 mssComponentProg = genSymSimple (mssComponentProgSpec :: ProgSpecInit a) "prog"

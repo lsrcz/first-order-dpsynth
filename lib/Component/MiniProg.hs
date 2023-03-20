@@ -22,7 +22,7 @@ nodeOp (Node o _ _) = o
 nodeOutputIdx :: Node val -> val
 nodeOutputIdx (Node _ o _) = o
 
-data MiniProg val = MiniProg {nodes :: [Node val], output :: val}
+data MiniProg val = MiniProg {nodes :: [Node val], output :: val, outputRange :: (val, val)}
   deriving (Generic, Show)
   deriving (EvaluateSym, SEq) via (Default (MiniProg val))
 
@@ -32,7 +32,7 @@ data ComponentSpec
 
 data NodeSpec = NodeSpec {componentInfo :: ComponentSpec, globalInputNum :: Int, globalSlotNum :: Int}
 
-data MiniProgSpec = MiniProgSpec {componentSpec :: [ComponentSpec], inputNum :: Int}
+data MiniProgSpec = MiniProgSpec {componentSpec :: [ComponentSpec], inputNum :: Int, maxOutputIdx :: Int}
 
 instance GenSymSimple NodeSpec (Node SymInteger) where
   simpleFresh (NodeSpec (ComponentSpec op ii) _ _) = do
@@ -59,22 +59,37 @@ instance GenSymSimple NodeSpec (Node (UnionM Val)) where
     return $ Node op (mrgReturn $ Internal o) i
 
 instance GenSymSimple MiniProgSpec (MiniProg SymInteger) where
-  simpleFresh (MiniProgSpec c i) = do
+  simpleFresh (MiniProgSpec c i midx) = do
     let specs = [NodeSpec c1 i (length c) | c1 <- c]
     o <- simpleFresh ()
-    flip MiniProg o <$> traverse simpleFresh specs
+    (\n -> MiniProg n o (internalVal i 0, internalVal i midx)) <$> traverse simpleFresh specs
 
 instance (KnownNat n, 1 <= n) => GenSymSimple MiniProgSpec (MiniProg (SymIntN n)) where
-  simpleFresh (MiniProgSpec c i) = do
+  simpleFresh (MiniProgSpec c i midx) = do
     let specs = [NodeSpec c1 i (length c) | c1 <- c]
     o <- simpleFresh ()
-    flip MiniProg o <$> traverse simpleFresh specs
+    (\n -> MiniProg n o (internalVal i 0, internalVal i midx)) <$> traverse simpleFresh specs
 
 instance GenSymSimple MiniProgSpec (MiniProg (UnionM Val)) where
-  simpleFresh (MiniProgSpec c i) = do
+  simpleFresh (MiniProgSpec c i midx) = do
     let specs = [NodeSpec c1 i (length c) | c1 <- c]
     o <- chooseFresh [0 .. length c - 1]
-    flip MiniProg (mrgReturn $ Internal o) <$> traverse simpleFresh specs
+    (\n -> MiniProg n (mrgReturn $ Internal o)  (internalVal i 0, internalVal i midx)) <$> traverse simpleFresh specs
+
+data Func a where
+  Func :: Int -> Bool -> (forall m. (MonadError VerificationConditions m, MonadUnion m, Mergeable a) => [a] -> m a) -> Func a
+
+type Op = B.ByteString
+
+type FuncMap a = M.HashMap Op (Func a)
+
+outputInRange ::
+  forall val m.
+  (ValLike val, MonadUnion m, MonadError VerificationConditions m) =>
+  MiniProg val -> m ()
+outputInRange (MiniProg _ o (l, r)) = do
+  symAssert $ leVal l o
+  symAssert $ leVal o r
 
 orderSameComponents ::
   forall val a m.
@@ -199,7 +214,7 @@ data EnhancedMiniProg val a = EnhancedMiniProg {enhancedNodes :: [EnhancedNode v
   deriving (EvaluateSym) via (Default (EnhancedMiniProg val a))
 
 genEnhancedMiniProg :: forall val m a. (ValLike val, MonadFresh m, MonadUnion m, MonadWriter IntermediateVarSet m, ExtractSymbolics a) => [a] -> MiniProg val -> m a -> m (EnhancedMiniProg val a)
-genEnhancedMiniProg inputs (MiniProg prog outputIdx) intermediateGen = flip EnhancedMiniProg outputIdx <$> ((++) <$> goInputs 0 inputs <*> go prog)
+genEnhancedMiniProg inputs (MiniProg prog outputIdx _) intermediateGen = flip EnhancedMiniProg outputIdx <$> ((++) <$> goInputs 0 inputs <*> go prog)
   where
     goInputs _ [] = return []
     goInputs pos (x : xs) = do
@@ -254,13 +269,6 @@ connected (EnhancedMiniProg enodes _) =
       )
         =<< enodes
 
-data Func a where
-  Func :: Int -> Bool -> (forall m. (MonadError VerificationConditions m, MonadUnion m, Mergeable a) => [a] -> m a) -> Func a
-
-type Op = B.ByteString
-
-type FuncMap a = M.HashMap Op (Func a)
-
 interpretOp :: (MonadError VerificationConditions m, MonadUnion m, Mergeable a) => Op -> FuncMap a -> [a] -> m a
 interpretOp op fm args = case M.lookup op fm of
   Nothing -> mrgThrowError AssertionViolation
@@ -279,6 +287,7 @@ semanticsCorrect fm (EnhancedMiniProg enodes _) = go enodes
 miniProgWellFormedConstraints :: (ValLike val, UnionLike m, MonadError VerificationConditions m) => Int -> FuncMap a -> MiniProg val -> m ()
 miniProgWellFormedConstraints numInputs fm prog = do
   --  lessProg prog
+  outputInRange prog
   orderSameComponents fm prog
   binarySymmReduction fm prog
   boundProg numInputs prog

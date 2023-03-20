@@ -6,6 +6,15 @@ cradle:
     - path: "./assem/Main.hs"
       component: "first-order-dpsynth:exe:assem"
 
+    - path: "./assem/ASSEMSpec.hs"
+      component: "first-order-dpsynth:exe:assem"
+
+    - path: "./assem/Component.hs"
+      component: "first-order-dpsynth:exe:assem"
+
+    - path: "./assem/OOPSLA.hs"
+      component: "first-order-dpsynth:exe:assem"
+
     - path: "./assem/Paths_first_order_dpsynth.hs"
       component: "first-order-dpsynth:exe:assem"
 
@@ -16,6 +25,15 @@ cradle:
       component: "first-order-dpsynth:exe:component"
 
     - path: "./mas/Main.hs"
+      component: "first-order-dpsynth:exe:mas"
+
+    - path: "./mas/Component.hs"
+      component: "first-order-dpsynth:exe:mas"
+
+    - path: "./mas/MASSpec.hs"
+      component: "first-order-dpsynth:exe:mas"
+
+    - path: "./mas/OOPSLA.hs"
       component: "first-order-dpsynth:exe:mas"
 
     - path: "./mas/Paths_first_order_dpsynth.hs"
@@ -30,10 +48,31 @@ cradle:
     - path: "./mmm/Main.hs"
       component: "first-order-dpsynth:exe:mmm"
 
+    - path: "./mmm/Bytecode.hs"
+      component: "first-order-dpsynth:exe:mmm"
+
+    - path: "./mmm/Component.hs"
+      component: "first-order-dpsynth:exe:mmm"
+
+    - path: "./mmm/MMMSpec.hs"
+      component: "first-order-dpsynth:exe:mmm"
+
+    - path: "./mmm/OOPSLA.hs"
+      component: "first-order-dpsynth:exe:mmm"
+
     - path: "./mmm/Paths_first_order_dpsynth.hs"
       component: "first-order-dpsynth:exe:mmm"
 
     - path: "./mss/Main.hs"
+      component: "first-order-dpsynth:exe:mss"
+
+    - path: "./mss/Component.hs"
+      component: "first-order-dpsynth:exe:mss"
+
+    - path: "./mss/MSSSpec.hs"
+      component: "first-order-dpsynth:exe:mss"
+
+    - path: "./mss/OOPSLA.hs"
       component: "first-order-dpsynth:exe:mss"
 
     - path: "./mss/Paths_first_order_dpsynth.hs"

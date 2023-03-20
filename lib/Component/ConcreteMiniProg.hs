@@ -15,7 +15,13 @@ data CNode cval = CNode B.ByteString cval [cval]
 
 data CMiniProg cval = CMiniProg {cnodes :: [CNode cval], output :: cval}
   deriving (Generic, Show)
-  deriving (ToCon (MiniProg val)) via (Default (CMiniProg cval))
+  -- deriving (ToCon (MiniProg val)) via (Default (CMiniProg cval))
+
+instance ToCon val cval => ToCon (MiniProg val) (CMiniProg cval) where
+  toCon (MiniProg n o _) = do
+    nc <- toCon n
+    no <- toCon o
+    return $ CMiniProg nc no
 
 interpretCMiniProg :: (CValLike cval, MonadUnion m, Mergeable a, MonadError VerificationConditions m) => [a] -> CMiniProg cval -> FuncMap a -> m a
 interpretCMiniProg inputs (CMiniProg ns o) fm = go [] s

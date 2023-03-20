@@ -100,10 +100,10 @@ misComponentCProg =
 misComponentProgSpec :: ProgSpec
 misComponentProgSpec =
   ProgSpec
-    [ MiniProgSpec [ComponentSpec "+" 2] 3,
-      MiniProgSpec [ComponentSpec "max" 2] 3
+    [ MiniProgSpec [ComponentSpec "+" 2] 3 0,
+      MiniProgSpec [ComponentSpec "max" 2] 3 0
     ]
-    (MiniProgSpec [ComponentSpec "max" 2] 2)
+    (MiniProgSpec [ComponentSpec "max" 2] 2 0)
 
 misComponentProg :: (GenSymSimple () a, Num a) => Prog SymInteger a
 misComponentProg = genSymSimple ((), misComponentProgSpec) "prog"
@@ -111,10 +111,10 @@ misComponentProg = genSymSimple ((), misComponentProgSpec) "prog"
 misComponentProgSpec1 :: ProgSpec
 misComponentProgSpec1 =
   ProgSpec
-    [ MiniProgSpec [ComponentSpec "+" 2, ComponentSpec "+" 2] 3,
-      MiniProgSpec [ComponentSpec "max" 2, ComponentSpec "max" 2] 3
+    [ MiniProgSpec [ComponentSpec "+" 2, ComponentSpec "+" 2] 3 1,
+      MiniProgSpec [ComponentSpec "max" 2, ComponentSpec "max" 2] 3 1
     ]
-    (MiniProgSpec [ComponentSpec "max" 2] 2)
+    (MiniProgSpec [ComponentSpec "max" 2] 2 0)
 
 misComponentProg1 :: (GenSymSimple () a, Num a) => Prog SymInteger a
 misComponentProg1 = genSymSimple ((), misComponentProgSpec1) "prog"

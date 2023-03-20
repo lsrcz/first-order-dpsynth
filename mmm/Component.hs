@@ -77,14 +77,15 @@ mmmComponentProgSpec :: Num a => ProgSpecInit a
 mmmComponentProgSpec =
   ProgSpecInit
     [0, 0, 0]
-    [ MiniProgSpec [ComponentSpec "max" 2] 4,
+    [ MiniProgSpec [ComponentSpec "max" 2] 4 0,
       MiniProgSpec
         [ RestrictedSpec "max" 2 (Just [2]) (Just [Internal 0, Internal 1]),
           RestrictedSpec "max" 2 (Just [3]) (Just [Internal 0, Internal 1]),
           RestrictedSpec "+" 2 (Just [1]) Nothing,
           RestrictedSpec "+" 2 (Just [0]) Nothing
         ]
-        4,
+        4
+        2,
       MiniProgSpec
         [ RestrictedSpec "max" 2 (Just [2]) (Just [Internal 0, Internal 1]),
           RestrictedSpec "max" 2 (Just [3]) (Just [Internal 0, Internal 1]),
@@ -92,8 +93,9 @@ mmmComponentProgSpec =
           RestrictedSpec "-" 2 (Just [0]) Nothing
         ]
         4
+        2
     ]
-    (MiniProgSpec [ComponentSpec "max" 2, ComponentSpec "max" 2] 3)
+    (MiniProgSpec [ComponentSpec "max" 2, ComponentSpec "max" 2] 3 1)
 
 mmmComponentProg1 :: forall a. (Num a) => Prog (UnionM Val) a
 mmmComponentProg1 = genSymSimple (mmmComponentProgSpec :: ProgSpecInit a) "prog"

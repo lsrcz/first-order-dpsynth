@@ -47,6 +47,7 @@ library
       Ops
       Query
       Spec
+      T
       Timing
   other-modules:
       Paths_first_order_dpsynth
