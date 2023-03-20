@@ -14,6 +14,8 @@ import Data.Proxy
 import Debug.Trace
 import Grisette
 import Timing
+import Test.QuickCheck.Gen
+import Test.QuickCheck (Arbitrary(arbitrary))
 
 assemComponentCProg :: Num a => CProg Integer a
 assemComponentCProg =
@@ -60,8 +62,39 @@ assemComponentProgSpec =
         2
     )
 
+assemComponentProgSpec' :: Num a => ProgSpecInit a
+assemComponentProgSpec' =
+  ProgSpecInit
+    [0, 0]
+    [ MiniProgSpec
+        [ ComponentSpec "+" 2,
+          ComponentSpec "+" 2,
+          ComponentSpec "+" 2,
+          ComponentSpec "+" 2,
+          ComponentSpec "min" 2,
+          ComponentSpec "min" 2
+        ]
+        6,
+      MiniProgSpec
+        [ ComponentSpec "+" 2,
+          ComponentSpec "+" 2,
+          ComponentSpec "+" 2,
+          ComponentSpec "+" 2,
+          ComponentSpec "min" 2,
+          ComponentSpec "min" 2
+        ]
+        6
+    ]
+    ( MiniProgSpec
+        [ComponentSpec "min" 2]
+        2
+    )
+
 assemComponentProg :: forall a. (Num a) => Prog (SymIntN 5) a
 assemComponentProg = genSymSimple (assemComponentProgSpec :: ProgSpecInit a) "prog"
+
+assemComponentProg' :: forall a. (Num a) => Prog (SymIntN 5) a
+assemComponentProg' = genSymSimple (assemComponentProgSpec' :: ProgSpecInit a) "prog"
 
 restrictedAssemSpec ::
   forall a e.
@@ -77,11 +110,33 @@ restrictedAssemSpec inputs = do
     trav [v] = apply inputs v
     trav (v : vs) = let a = apply inputs v; acc = trav vs in mrgIte (a <=~ acc) a acc
 
+assemInputsGen :: Enum s => (s, s) -> Gen [[s]]
+assemInputsGen e = do
+  n <- getSize
+  vectorOf 4 (vectorOf n $ chooseEnum e)
+
 componentMain :: IO ()
 componentMain = do
   putStrLn "MAS Component"
   let configb = precise boolector {Grisette.transcript = Just "b.smt2"}
   qcComponent4 (Proxy @SymInteger) 17 8 8 assemAlgo assemComponentCProg
+
+  Right (_, x :: CProg (IntN 5) (IntN 8)) <-
+    timeItAll "cegis" $
+      cegisQuickCheck
+        configb
+        (restrictedAssemSpec @(SymIntN 8))
+        4
+        (assemInputsGen (-8, 8))
+        4
+        assemComponentProg
+        funcMap
+        (simpleFresh ())
+  print x
+
+  qcComponent4 (Proxy @(SymIntN 8)) 17 8 8 assemAlgo x
+
+{-
 
   Right (_, x :: CProg (IntN 5) (IntN 8)) <-
     timeItAll "cegis" $
@@ -100,3 +155,4 @@ componentMain = do
   print x
 
   qcComponent4 (Proxy @(SymIntN 8)) 17 8 8 assemAlgo x
+-}

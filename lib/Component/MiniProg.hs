@@ -6,6 +6,7 @@ import Control.Monad.Except
 import Control.Monad.Writer
 import qualified Data.ByteString as B
 import qualified Data.HashMap.Strict as M
+import Data.List
 import GHC.Generics
 import GHC.TypeLits
 import Grisette
@@ -14,6 +15,9 @@ data Node val
   = Node B.ByteString val [val]
   deriving (Generic, Show)
   deriving (Mergeable, SEq, EvaluateSym) via (Default (Node val))
+
+nodeOp :: Node val -> B.ByteString
+nodeOp (Node o _ _) = o
 
 nodeOutputIdx :: Node val -> val
 nodeOutputIdx (Node _ o _) = o
@@ -71,6 +75,67 @@ instance GenSymSimple MiniProgSpec (MiniProg (UnionM Val)) where
     let specs = [NodeSpec c1 i (length c) | c1 <- c]
     o <- chooseFresh [0 .. length c - 1]
     flip MiniProg (mrgReturn $ Internal o) <$> traverse simpleFresh specs
+
+orderSameComponents ::
+  forall val a m.
+  (ValLike val, MonadUnion m, MonadError VerificationConditions m) =>
+  FuncMap a ->
+  MiniProg val ->
+  m ()
+orderSameComponents fm p = do
+  mrgTraverse_ goOut $ snd <$> splitted
+  mrgTraverse_ (uncurry goIn) splitted
+  where
+    split :: [Node val] -> [(B.ByteString, [Node val])]
+    split [] = []
+    split ns@(a : _) =
+      case split1 (nodeOp a) ns of
+        (l, r) -> (nodeOp a, l) : split r
+    split1 :: B.ByteString -> [Node val] -> ([Node val], [Node val])
+    split1 _ [] = ([], [])
+    split1 o (a : as) | nodeOp a == o =
+      case split1 o as of
+        (cur, neq) -> (a : cur, neq)
+    split1 _ l = ([], l)
+    splitted = split (sortOn nodeOp (nodes p))
+    goOut :: [Node val] -> m ()
+    goOut [] = mrgReturn ()
+    goOut [_] = mrgReturn ()
+    goOut (a:b:xs) = do
+      symAssert $ ltVal (nodeOutputIdx a) (nodeOutputIdx b)
+      goOut (b:xs)
+    
+    goIn :: B.ByteString -> [Node val] -> m ()
+    goIn op l = case fm M.! op of
+      Func 1 _ _ -> goIn1 l
+      Func 2 True _ -> goIn2Comm l
+      Func 2 False _ -> goIn2 l
+      _ -> mrgReturn ()
+      
+
+    goIn1 :: [Node val] -> m ()
+    goIn1 [] = mrgReturn ()
+    goIn1 [_] = mrgReturn ()
+    goIn1 (Node _ _ [a]:n@(Node _ _ [b]):xs) = do
+      symAssert $ ltVal a b
+      goIn1 (n:xs)
+    goIn1 _ = error "Bad"
+
+    goIn2Comm :: [Node val] -> m ()
+    goIn2Comm [] = mrgReturn ()
+    goIn2Comm [_] = mrgReturn ()
+    goIn2Comm (Node _ _ [a1,a2]:n@(Node _ _ [b1,b2]):xs) = do
+      symAssert $ ltVal a2 b2 ||~ (eqVal a2 b2 &&~ ltVal a1 b1)
+      goIn2Comm (n:xs)
+    goIn2Comm _ = error "Bad"
+
+    goIn2 :: [Node val] -> m ()
+    goIn2 [] = mrgReturn ()
+    goIn2 [_] = mrgReturn ()
+    goIn2 (Node _ _ [a1,a2]:n@(Node _ _ [b1,b2]):xs) = do
+      symAssert $ leVal a1 b1 ||~ leVal a2 b1 ||~ leVal a1 b2 ||~ leVal a2 b2
+      goIn2 (n:xs)
+    goIn2 _ = error "Bad"
 
 boundProg :: (ValLike val, MonadUnion m, MonadError VerificationConditions m) => Int -> MiniProg val -> m ()
 boundProg numInputs p = go (nodes p)
@@ -214,6 +279,7 @@ semanticsCorrect fm (EnhancedMiniProg enodes _) = go enodes
 miniProgWellFormedConstraints :: (ValLike val, UnionLike m, MonadError VerificationConditions m) => Int -> FuncMap a -> MiniProg val -> m ()
 miniProgWellFormedConstraints numInputs fm prog = do
   --  lessProg prog
+  orderSameComponents fm prog
   binarySymmReduction fm prog
   boundProg numInputs prog
   acyclicProg prog
