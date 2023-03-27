@@ -25,6 +25,7 @@ dependencies:
 - QuickCheck
 - sbv
 - template-haskell
+- cmdargs
 
 default-extensions:
 - BangPatterns
@@ -107,3 +108,17 @@ executables:
     main: Main.hs
     dependencies: first-order-dpsynth
 
+  2ndmin:
+    source-dirs: 2ndMin
+    main: Main.hs
+    dependencies: first-order-dpsynth
+
+  3rdmin:
+    source-dirs: 3rdMin
+    main: Main.hs
+    dependencies: first-order-dpsynth
+
+  balanced:
+    source-dirs: balanced
+    main: Main.hs
+    dependencies: first-order-dpsynth

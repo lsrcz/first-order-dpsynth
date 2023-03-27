@@ -15,7 +15,8 @@ data CNode cval = CNode B.ByteString cval [cval]
 
 data CMiniProg cval = CMiniProg {cnodes :: [CNode cval], output :: cval}
   deriving (Generic, Show)
-  -- deriving (ToCon (MiniProg val)) via (Default (CMiniProg cval))
+
+-- deriving (ToCon (MiniProg val)) via (Default (CMiniProg cval))
 
 instance ToCon val cval => ToCon (MiniProg val) (CMiniProg cval) where
   toCon (MiniProg n o _) = do

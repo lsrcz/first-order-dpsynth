@@ -2,6 +2,8 @@ module Main where
 
 import Bytecode.Instruction
 import Bytecode.Prog
+import Common.Spec
+import Common.Timing
 import Common.Val
 import Component.CEGIS
 import Component.ConcreteMiniProg
@@ -11,16 +13,16 @@ import Component.Ops
 import Component.Prog
 import Control.Monad
 import Control.Monad.Except
-import Core
 import Data.Proxy
 import Debug.Trace
-import Gen
 import Grisette
-import Ops
-import Query
-import Spec
+import OOPSLA.Core
+import OOPSLA.Gen
+import OOPSLA.Ops
+import OOPSLA.Query
 import Test.QuickCheck
-import Timing
+import Bytecode.Query
+import Bytecode.Ops
 
 mis :: (Num a) => ConProgram a
 mis =
@@ -36,13 +38,13 @@ mis =
 misSketchComb :: forall proxy c s. (ToSym c s, Num c, Num s, SimpleMergeable s) => proxy c -> Program s
 misSketchComb _ =
   genSymSimple
-    (CombProgramSpec @c @s [0] (CombASTSpec0 1 1 ["zero", "id"] ["+", "max"]) (CombASTSpec0 0 1 [] ["max"]) 2 1)
+    (CombProgramSpec @c @s [0] (CombASTSpec0 1 1 0 ["zero", "id"] ["+", "max"] []) (CombASTSpec0 0 1 0 [] ["max"] []) 2 1)
     "mis"
 
 misSketchExt :: forall proxy c s. (ToSym c s, Num c, Num s, SimpleMergeable s) => proxy c -> Program s
 misSketchExt _ =
   genSymSimple
-    (ExtProgramSpec @c @s [0] (CombASTSpec0 1 1 ["zero", "id"] ["+"]) "max" 1 2 2 1)
+    (ExtProgramSpec @c @s [0] (CombASTSpec0 1 1 0 ["zero", "id"] ["+"] []) "max" 1 2 2 1)
     "misopt"
 
 misAlgo :: forall a. (Num a, Ord a) => [a] -> a
@@ -169,17 +171,15 @@ main :: IO ()
 main = do
   let config = precise z3
 
-  {-
-    Just misIntSynthedBytecode :: Maybe (CBytecodeProg Integer) <-
-      timeItAll "misBytecode" $ bytecodeSynth1V config 1 bytecodeFuncMap () (const $ con True) (misSpecV @SymInteger) bytecodeSketch
-    print misIntSynthedBytecode
+  Just misIntSynthedBytecode :: Maybe (CBytecodeProg Integer) <-
+    timeItAll "misBytecode" $ bytecodeSynth1V config 1 bytecodeFuncMap () (const $ con True) (misSpecV @SymInteger) bytecodeSketch
+  print misIntSynthedBytecode
 
-    quickCheck
-      ( \(l :: [Integer]) ->
-          (interpretBytecodeProg [toSym l] (toSym misIntSynthedBytecode) bytecodeFuncMap :: ExceptT VerificationConditions UnionM SymInteger)
-            == mrgReturn (toSym $ misAlgo l :: SymInteger)
-      )
-      -}
+  quickCheck
+    ( \(l :: [Integer]) ->
+        (interpretBytecodeProg [toSym l] (toSym misIntSynthedBytecode) bytecodeFuncMap :: ExceptT VerificationConditions UnionM SymInteger)
+          == mrgReturn (toSym $ misAlgo l :: SymInteger)
+    )
 
   -- print i1
 
@@ -225,9 +225,9 @@ main = do
       -}
 
   misIntSynthedExtV :: Maybe (ConProgram Integer) <-
-    timeItAll "misextV" $ synth1V config availableUnary availableBinary () (const $ con True) (misSpecV @SymInteger) (misSketchExt (Proxy @Integer))
+    timeItAll "misextV" $ synth1V config availableUnary availableBinary availableTernary () (const $ con True) (misSpecV @SymInteger) (misSketchExt (Proxy @Integer))
   print misIntSynthedExtV
 
   misIntSynthedCombV :: Maybe (ConProgram Integer) <-
-    timeItAll "miscombV" $ synth1V config availableUnary availableBinary () (const $ con True) (misSpecV @SymInteger) (misSketchComb (Proxy @Integer))
+    timeItAll "miscombV" $ synth1V config availableUnary availableBinary availableTernary () (const $ con True) (misSpecV @SymInteger) (misSketchComb (Proxy @Integer))
   print misIntSynthedCombV

@@ -1,4 +1,4 @@
-module Spec where
+module Common.Spec where
 
 import Control.Monad.Except
 import Data.Foldable

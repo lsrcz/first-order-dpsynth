@@ -1,14 +1,17 @@
-module Gen where
+module OOPSLA.Gen where
 
-import Core
 import qualified Data.ByteString as B
 import Grisette
+import OOPSLA.Core
+-- import Debug.Trace
 
 data CombASTSpec0 sval = CombASTSpec0
   { unaryDepth :: Int,
     binaryDepth :: Int,
+    ternaryDepth :: Int,
     unaries :: [B.ByteString],
-    binaries :: [B.ByteString]
+    binaries :: [B.ByteString],
+    ternaries :: [B.ByteString]
   }
 
 data CombASTSpec sval = CombASTSpec
@@ -18,10 +21,11 @@ data CombASTSpec sval = CombASTSpec
 
 instance Mergeable sval => GenSym (CombASTSpec sval) (AST sval) where
   fresh :: forall m. (Mergeable sval, MonadFresh m) => CombASTSpec sval -> m (UnionM (AST sval))
-  fresh (CombASTSpec spec args) = go (unaryDepth spec) (binaryDepth spec)
+  fresh (CombASTSpec spec args) = go (unaryDepth spec) (binaryDepth spec) (ternaryDepth spec)
     where
       currUnaries = unaries spec
       currBinaries = binaries spec
+      currTernaries = ternaries spec
       argGen :: m (UnionM (AST sval))
       argGen = mrgFmap Arg . mrgReturn <$> chooseFresh args
       uGen :: Int -> m (UnionM (AST sval))
@@ -31,23 +35,42 @@ instance Mergeable sval => GenSym (CombASTSpec sval) (AST sval) where
             uf <- chooseFresh currUnaries
             l <- uGen (u - 1)
             return $ mrgUnary uf l
-      sp n = [(n - x, x) | x <- [0 .. n `div` 2]]
-      go :: Int -> Int -> m (UnionM (AST sval))
-      go u b
-        | b <= 0 = uGen u
-        | b == 1 = do
-            bf <- chooseFresh currBinaries
-            l <- uGen u
-            r <- uGen u
-            return $ mrgBinary bf l r
+      -- sp n = [(n - x, x) | x <- [0 .. n `div` 2]]
+      go :: Int -> Int -> Int -> m (UnionM (AST sval))
+      -- go :: Int -> Int -> m (UnionM (AST sval))
+      go u b t
+        | b <= 0 && t <= 0 = uGen u
+        | b <= 0 = go3 u 0 t
+        | t <= 0 = go2 u b 0
         | otherwise = do
-            x <- traverse (uncurry $ golr u) $ sp (b - 1)
-            chooseUnionFresh x
-      golr u b1 b2 = do
-        bf <- chooseFresh currBinaries
-        l <- go u b1
-        r <- go u b2
-        return $ mrgBinary bf l r
+          ba <- go2 u b t
+          ta <- go3 u b t
+          chooseUnionFresh [ba, ta]
+      go2 :: Int -> Int -> Int -> m (UnionM (AST sval))
+      go2 u b t = do
+        tf <- chooseFresh currBinaries
+        r <- (traverse . traverse) (uncurry (go u)) specs
+        let r2 = (\[x, y] -> Binary tf x y) <$> r
+        chooseFresh r2
+        where
+          specs = [[(b1, t1), (b2, t2)] | (b1, b2) <- split2 (b - 1), (t1, t2) <- split2 t]
+      
+      go3 :: Int -> Int -> Int -> m (UnionM (AST sval))
+      go3 u b t = do
+        tf <- chooseFresh currTernaries
+        r <- (traverse . traverse) (uncurry (go u)) specs
+        let r2 = (\[x, y, z] -> Ternary tf x y z) <$> r
+        chooseFresh r2
+        where
+          specs = [[(b1, t1), (b2, t2), (b3, t3)] | (b1, b2, b3) <- split3 b, (t1, t2, t3) <- split30 (t - 1)]
+      
+      split2 :: Int -> [(Int, Int)]
+      split2 n = [(a, b) | a <- [0..n], b <- [0..n], a + b == n, a <= b ]
+      split30 :: Int -> [(Int, Int, Int)]
+      split30 n = [(0, b, c) | b <- [0..n], c <- [0..n], b + c == n, b <= c ]
+      split3 :: Int -> [(Int, Int, Int)]
+      split3 n = [(a, b, c) | a <- [0..1], b <- [0..n], c <- [0..n], a + b + c == n, b <= c ]
+
 
 data CombProgramSpec cval sval = CombProgramSpec
   { initsSpec :: [cval],

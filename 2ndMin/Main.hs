@@ -1,13 +1,13 @@
 module Main where
-
-import Component (componentMain)
-import OOPSLA
 import Common.MainFunc
+import RYOOPSLA
+import Component
 
 main :: IO ()
 main = mainFunc $ \case
+  "ryoopsla" -> ryoopslaMain
   "component" -> componentMain
-  "oopsla" -> oopslaMain
   _ -> \_ -> do
+    ryoopslaMain ""
     componentMain ""
-    oopslaMain ""
+

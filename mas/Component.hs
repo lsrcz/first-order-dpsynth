@@ -1,5 +1,7 @@
 module Component where
 
+import Common.Spec
+import Common.Timing
 import Component.CEGIS
 import Component.ConcreteMiniProg
 import Component.ConcreteProg
@@ -11,8 +13,6 @@ import Control.Monad.Except
 import Data.Proxy
 import Grisette
 import MASSpec
-import Spec
-import Timing
 
 masComponentCProg :: Num a => CProg Integer a
 masComponentCProg =
@@ -50,24 +50,28 @@ masComponentProgSpec =
         [ ComponentSpec "+" 2,
           ComponentSpec "max" 2
         ]
-        4,
+        4
+        1,
       MiniProgSpec
         [ ComponentSpec "negate" 1,
           ComponentSpec "+" 2,
           ComponentSpec "max" 2
         ]
-        4,
+        4
+        2,
       MiniProgSpec
         [ ComponentSpec "max" 2,
           ComponentSpec "max" 2
         ]
         4
+        1
     ]
     ( MiniProgSpec
         [ ComponentSpec "max" 2,
           ComponentSpec "max" 2
         ]
         3
+        1
     )
 
 masComponentProg :: forall a. (Num a) => Prog (SymIntN 5) a
@@ -82,8 +86,8 @@ restrictedMasSpec l = do
   mrgTraverse_ (\x -> symAssume $ x >=~ -8 &&~ x <=~ 8) $ join l
   spec apply allBitStrings l
 
-componentMain :: IO ()
-componentMain = do
+componentMain :: String -> IO ()
+componentMain _ = do
   putStrLn "MAS Component"
   let configb = precise boolector {Grisette.transcript = Just "b.smt2"}
   qcComponent (Proxy @SymInteger) 17 8 8 masAlgo masComponentCProg

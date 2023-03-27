@@ -2,11 +2,11 @@ module Bytecode.Query where
 
 import Bytecode.Instruction
 import Bytecode.Prog
+import Common.Timing
 import Control.Monad.Except
 import Data.Hashable
 import Data.Maybe
 import Grisette
-import Timing
 
 bytecodeSynthV ::
   (ExtractSymbolics val, SimpleMergeable val, SEq val, ToCon val cval, EvaluateSym val, Eq val, Hashable val) =>

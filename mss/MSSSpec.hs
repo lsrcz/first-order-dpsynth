@@ -1,9 +1,9 @@
 module MSSSpec where
 
+import Common.Spec
 import Control.Monad.Except
 import GHC.Stack
 import Grisette
-import Spec
 
 mssAlgo :: (Num a, Ord a) => [a] -> a
 mssAlgo = go 0 0

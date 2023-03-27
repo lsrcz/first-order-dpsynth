@@ -32,6 +32,10 @@ library
       Bytecode.Ops
       Bytecode.Prog
       Bytecode.Query
+      Common.MainFunc
+      Common.Spec
+      Common.T
+      Common.Timing
       Common.Val
       Component.CEGIS
       Component.ConcreteMiniProg
@@ -41,14 +45,11 @@ library
       Component.Ops
       Component.Prog
       Component.QuickCheck
-      Core
-      Gen
-      Interpreter
-      Ops
-      Query
-      Spec
-      T
-      Timing
+      OOPSLA.Core
+      OOPSLA.Gen
+      OOPSLA.Interpreter
+      OOPSLA.Ops
+      OOPSLA.Query
   other-modules:
       Paths_first_order_dpsynth
   hs-source-dirs:
@@ -88,7 +89,131 @@ library
     , base >4.14 && <5
     , bytestring
     , clock
+    , cmdargs
     , deepseq
+    , grisette ==0.1.*
+    , hashable
+    , monad-par
+    , mtl >=2.2.2
+    , parallel
+    , pretty-simple
+    , sbv
+    , template-haskell
+    , transformers >=0.5.6.2
+    , unordered-containers
+  default-language: Haskell2010
+  if flag(fast)
+    ghc-options: -O2
+  else
+    ghc-options: -O0
+
+executable 2ndmin
+  main-is: Main.hs
+  other-modules:
+      Component
+      RYOOPSLA
+      SecondMinSpec
+      Paths_first_order_dpsynth
+  hs-source-dirs:
+      2ndMin
+  default-extensions:
+      BangPatterns
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveGeneric
+      DeriveAnyClass
+      DeriveLift
+      DerivingStrategies
+      DerivingVia
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      InstanceSigs
+      KindSignatures
+      LambdaCase
+      MultiParamTypeClasses
+      OverloadedStrings
+      PatternSynonyms
+      RankNTypes
+      ScopedTypeVariables
+      TemplateHaskell
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      StandaloneDeriving
+  ghc-options: -Wall -ferror-spans -eventlog -threaded -rtsopts
+  build-depends:
+      QuickCheck
+    , base >4.14 && <5
+    , bytestring
+    , clock
+    , cmdargs
+    , deepseq
+    , first-order-dpsynth
+    , grisette ==0.1.*
+    , hashable
+    , monad-par
+    , mtl >=2.2.2
+    , parallel
+    , pretty-simple
+    , sbv
+    , template-haskell
+    , transformers >=0.5.6.2
+    , unordered-containers
+  default-language: Haskell2010
+  if flag(fast)
+    ghc-options: -O2
+  else
+    ghc-options: -O0
+
+executable 3rdmin
+  main-is: Main.hs
+  other-modules:
+      Paths_first_order_dpsynth
+  hs-source-dirs:
+      3rdMin
+  default-extensions:
+      BangPatterns
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveGeneric
+      DeriveAnyClass
+      DeriveLift
+      DerivingStrategies
+      DerivingVia
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      InstanceSigs
+      KindSignatures
+      LambdaCase
+      MultiParamTypeClasses
+      OverloadedStrings
+      PatternSynonyms
+      RankNTypes
+      ScopedTypeVariables
+      TemplateHaskell
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      StandaloneDeriving
+  ghc-options: -Wall -ferror-spans -eventlog -threaded -rtsopts
+  build-depends:
+      QuickCheck
+    , base >4.14 && <5
+    , bytestring
+    , clock
+    , cmdargs
+    , deepseq
+    , first-order-dpsynth
     , grisette ==0.1.*
     , hashable
     , monad-par
@@ -149,6 +274,67 @@ executable assem
     , base >4.14 && <5
     , bytestring
     , clock
+    , cmdargs
+    , deepseq
+    , first-order-dpsynth
+    , grisette ==0.1.*
+    , hashable
+    , monad-par
+    , mtl >=2.2.2
+    , parallel
+    , pretty-simple
+    , sbv
+    , template-haskell
+    , transformers >=0.5.6.2
+    , unordered-containers
+  default-language: Haskell2010
+  if flag(fast)
+    ghc-options: -O2
+  else
+    ghc-options: -O0
+
+executable balanced
+  main-is: Main.hs
+  other-modules:
+      Paths_first_order_dpsynth
+  hs-source-dirs:
+      balanced
+  default-extensions:
+      BangPatterns
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveGeneric
+      DeriveAnyClass
+      DeriveLift
+      DerivingStrategies
+      DerivingVia
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      InstanceSigs
+      KindSignatures
+      LambdaCase
+      MultiParamTypeClasses
+      OverloadedStrings
+      PatternSynonyms
+      RankNTypes
+      ScopedTypeVariables
+      TemplateHaskell
+      TupleSections
+      TypeApplications
+      TypeFamilies
+      TypeOperators
+      ViewPatterns
+      StandaloneDeriving
+  ghc-options: -Wall -ferror-spans -eventlog -threaded -rtsopts
+  build-depends:
+      QuickCheck
+    , base >4.14 && <5
+    , bytestring
+    , clock
+    , cmdargs
     , deepseq
     , first-order-dpsynth
     , grisette ==0.1.*
@@ -208,6 +394,7 @@ executable component
     , base >4.14 && <5
     , bytestring
     , clock
+    , cmdargs
     , deepseq
     , first-order-dpsynth
     , grisette ==0.1.*
@@ -270,6 +457,7 @@ executable mas
     , base >4.14 && <5
     , bytestring
     , clock
+    , cmdargs
     , deepseq
     , first-order-dpsynth
     , grisette ==0.1.*
@@ -329,6 +517,7 @@ executable mis
     , base >4.14 && <5
     , bytestring
     , clock
+    , cmdargs
     , deepseq
     , first-order-dpsynth
     , grisette ==0.1.*
@@ -392,6 +581,7 @@ executable mmm
     , base >4.14 && <5
     , bytestring
     , clock
+    , cmdargs
     , deepseq
     , first-order-dpsynth
     , grisette ==0.1.*
@@ -454,6 +644,7 @@ executable mss
     , base >4.14 && <5
     , bytestring
     , clock
+    , cmdargs
     , deepseq
     , first-order-dpsynth
     , grisette ==0.1.*

@@ -3,6 +3,27 @@ cradle:
     - path: "./lib"
       component: "first-order-dpsynth:lib"
 
+    - path: "./2ndMin/Main.hs"
+      component: "first-order-dpsynth:exe:2ndmin"
+
+    - path: "./2ndMin/Component.hs"
+      component: "first-order-dpsynth:exe:2ndmin"
+
+    - path: "./2ndMin/RYOOPSLA.hs"
+      component: "first-order-dpsynth:exe:2ndmin"
+
+    - path: "./2ndMin/SecondMinSpec.hs"
+      component: "first-order-dpsynth:exe:2ndmin"
+
+    - path: "./2ndMin/Paths_first_order_dpsynth.hs"
+      component: "first-order-dpsynth:exe:2ndmin"
+
+    - path: "./3rdMin/Main.hs"
+      component: "first-order-dpsynth:exe:3rdmin"
+
+    - path: "./3rdMin/Paths_first_order_dpsynth.hs"
+      component: "first-order-dpsynth:exe:3rdmin"
+
     - path: "./assem/Main.hs"
       component: "first-order-dpsynth:exe:assem"
 
@@ -17,6 +38,12 @@ cradle:
 
     - path: "./assem/Paths_first_order_dpsynth.hs"
       component: "first-order-dpsynth:exe:assem"
+
+    - path: "./balanced/Main.hs"
+      component: "first-order-dpsynth:exe:balanced"
+
+    - path: "./balanced/Paths_first_order_dpsynth.hs"
+      component: "first-order-dpsynth:exe:balanced"
 
     - path: "./component/Main.hs"
       component: "first-order-dpsynth:exe:component"

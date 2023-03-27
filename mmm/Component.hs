@@ -1,5 +1,7 @@
 module Component where
 
+import Common.Spec
+import Common.Timing
 import Common.Val
 import Component.CEGIS
 import Component.ConcreteMiniProg
@@ -13,9 +15,7 @@ import Control.Monad.Except
 import Data.Proxy
 import Grisette
 import MMMSpec
-import Spec
 import Test.QuickCheck
-import Timing
 
 mmmComponentCProg :: Num a => CProg CVal a
 mmmComponentCProg =
@@ -115,13 +115,13 @@ restrictedMmmSpec l = do
   mrgTraverse_ (\x -> symAssume $ x >=~ -8 &&~ x <=~ 8) $ join l
   spec apply allBitStrings l
 
-componentMain :: IO ()
-componentMain = do
+componentMain :: String -> IO ()
+componentMain _ = do
   let config = precise z3 {Grisette.transcript = Just "a.smt2"}
 
   let configb = precise boolector {Grisette.transcript = Just "b.smt2"}
 
-  Right (_, x :: CProg (IntN 5) (IntN 8)) <- timeItAll "cegis" $ cegisCustomized configb restrictedMmmSpec [[[]], [["a" :: SymIntN 8]], [["a", "b"]], [["a", "b", "c"]], [["a", "b", "c", "d"]]] mmmComponentProg1'' funcMap (simpleFresh ())
+  Right (_, x :: CProg (IntN 5) (IntN 8)) <- timeItAll "cegis" $ cegisCustomized configb restrictedMmmSpec [[[]], [[-1]], [[1]], [[-1, 1]], [[1,1]], [[7]], [[1,-6]], [[7,2]], [[1,-6,2]], [[2,0,2]], [[2,0,2,1]], [[-3,1]], [[-3,1,1]], [["a" :: SymIntN 8]], [["a", "b"]], [["a", "b", "c"]], [["a", "b", "c", "d"]]] mmmComponentProg1'' funcMap (simpleFresh ())
   print x
 
   qcComponent (Proxy @(SymIntN 8)) 17 8 8 mmmAlgo x

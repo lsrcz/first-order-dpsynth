@@ -1,8 +1,8 @@
 module MMMSpec where
 
+import Common.Spec
 import Control.Monad.Except
 import Grisette
-import Spec
 
 mmmAlgo :: forall a. (Num a, Ord a) => [a] -> a
 mmmAlgo = go 0 0 0

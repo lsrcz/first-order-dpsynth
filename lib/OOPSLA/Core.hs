@@ -1,4 +1,4 @@
-module Core where
+module OOPSLA.Core where
 
 import Control.Monad.Except
 import qualified Data.ByteString as B
@@ -15,6 +15,7 @@ data ConAST val
   | ConConst val
   | ConUnary B.ByteString (ConAST val)
   | ConBinary B.ByteString (ConAST val) (ConAST val)
+  | ConTernary B.ByteString (ConAST val) (ConAST val) (ConAST val)
   | ConNoMrg (ConAST val)
   deriving (Generic)
 
@@ -23,6 +24,7 @@ data AST val
   | Const (UnionM val)
   | Unary (UnionM B.ByteString) (UnionM (AST val))
   | Binary (UnionM B.ByteString) (UnionM (AST val)) (UnionM (AST val))
+  | Ternary (UnionM B.ByteString) (UnionM (AST val)) (UnionM (AST val)) (UnionM (AST val))
   | NoMrg (UnionM (AST val))
   deriving (Show, Generic, Eq, Hashable)
   deriving (EvaluateSym, SEq) via (Default (AST val))
@@ -45,7 +47,8 @@ instance Mergeable val => Mergeable (AST val) where
           Const {} -> 1
           Unary {} -> 2
           Binary {} -> 3
-          NoMrg {} -> 4
+          Ternary {} -> 4
+          NoMrg {} -> 5
       )
       ( \case
           0 -> SimpleStrategy $ \cond (Arg l) (Arg r) -> Arg $ mrgIf cond l r
@@ -54,7 +57,9 @@ instance Mergeable val => Mergeable (AST val) where
             Unary (mrgIf cond lf rf) (mrgIf cond l r)
           3 -> SimpleStrategy $ \cond (Binary lf ll lr) (Binary rf rl rr) ->
             Binary (mrgIf cond lf rf) (mrgIf cond ll rl) (mrgIf cond lr rr)
-          4 -> NoStrategy
+          4 -> SimpleStrategy $ \cond (Ternary lf l1 l2 l3) (Ternary rf r1 r2 r3) ->
+            Ternary (mrgIf cond lf rf) (mrgIf cond l1 r1) (mrgIf cond l2 r2) (mrgIf cond l3 r3)
+          5 -> NoStrategy
           _ -> undefined
       )
 
@@ -69,6 +74,8 @@ formatConAST n idx (ConUnary f sub)
 formatConAST n idx (ConBinary f l r)
   | isAlpha (C.head f) = C.unpack f ++ "(" ++ formatConAST n idx l ++ ", " ++ formatConAST n idx r ++ ")"
   | otherwise = "(" ++ formatConAST n idx l ++ " " ++ C.unpack f ++ " " ++ formatConAST n idx r ++ ")"
+formatConAST n idx (ConTernary f a1 a2 a3)
+  = C.unpack f ++ "(" ++ formatConAST n idx a1 ++ ", " ++ formatConAST n idx a2 ++ ", " ++ formatConAST n idx a3 ++ ")"
 formatConAST n idx (ConNoMrg v) = formatConAST n idx v
 
 data ConProgram val = ConProgram
@@ -116,5 +123,7 @@ instance Show val => Show (ConProgram val) where
 type UnaryFuncMap val = M.HashMap B.ByteString (val -> ExceptT VerificationConditions UnionM val)
 
 type BinaryFuncMap val = M.HashMap B.ByteString (val -> val -> ExceptT VerificationConditions UnionM val)
+
+type TernaryFuncMap val = M.HashMap B.ByteString (val -> val -> val -> ExceptT VerificationConditions UnionM val)
 
 $(makeUnionWrapper "mrg" ''AST)

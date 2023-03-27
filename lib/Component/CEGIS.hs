@@ -1,5 +1,6 @@
 module Component.CEGIS where
 
+import Common.Timing
 import Common.Val
 import Component.ConcreteProg
 import Component.IntermediateVarSet
@@ -8,15 +9,13 @@ import Component.Prog
 import Control.Monad.Except
 import Control.Monad.Writer
 import Data.Bifunctor
+import Data.Maybe
 import qualified Data.SBV as SBV
 import qualified Data.SBV.Control as SBVC
 import Grisette
 import Grisette.Backend.SBV.Data.SMT.Lowering
-import Timing
-import Test.QuickCheck.Gen
 import Test.QuickCheck
-import Data.Maybe
-import Debug.Trace
+import Test.QuickCheck.Gen
 
 sbvCheckSatResult :: SBVC.CheckSatResult -> SolvingFailure
 sbvCheckSatResult SBVC.Sat = error "Should not happen"
@@ -64,7 +63,6 @@ cegisCustomized' config spec inputs prog funcMap gen = SBV.runSMTWith ((sbvConfi
 
     f :: Int -> [[a]] -> (ExceptT VerificationConditions UnionM a, IntermediateVarSet)
     f idx input = first ExceptT $ simpleMerge $ fmap (first mrgReturn) $ runWriterT $ runExceptT $ runFreshT (interpretProg input prog funcMap gen) (FreshIdentWithInfo "x" idx)
-    (e0, _) = f 0 inputs
 
     phiIO :: Int -> [[a]] -> a -> SymBool
     phiIO idx i o = simpleMerge $ do
@@ -247,7 +245,7 @@ cegisQuickCheck ::
   FuncMap a ->
   M a ->
   IO (Either SolvingFailure ([[[a]]], CProg cval c))
-cegisQuickCheck config spec numInputs inputGen maxSize prog funcMap gen = SBV.runSMTWith (sbvConfig config) {transcript = Just "guess.smt2"} $ do
+cegisQuickCheck config spec numInputs inputGen maxGenSize prog funcMap gen = SBV.runSMTWith (sbvConfig config) {transcript = Just "guess.smt2"} $ do
   let SymBool t = wellFormed
   (newm, a) <- lowerSinglePrim config t
   SBVC.query $
@@ -282,19 +280,30 @@ cegisQuickCheck config spec numInputs inputGen maxSize prog funcMap gen = SBV.ru
       return $ x ==~ Right o
 
     check :: Int -> Model -> IO (Either SolvingFailure ([[a]], Int, a))
-    check i _ | i > maxSize = return (Left Unsat)
+    check i _ | i > maxGenSize = return (Left Unsat)
     check i candidate = do
       let evaluated :: CProg cval a = evaluateSymToCon candidate prog
-      r <- quickCheckWithResult (stdArgs {maxSize=i, maxSuccess=1000, chatty=False}) (forAll inputGen $ \input ->
-        let
-          p = interpretCProg (toSym input) evaluated funcMap :: ExceptT VerificationConditions UnionM a
-          sp = spec (toSym input)
-         in case (p, sp) of (ExceptT (SingleU (Right v)), ExceptT (SingleU (Right sv))) -> (fromJust $ toCon v :: c) == (fromJust $ toCon sv))
+      r <-
+        quickCheckWithResult
+          (stdArgs {maxSize = i, maxSuccess = 1000, chatty = False})
+          ( forAll (resize i inputGen) $ \input ->
+              let p = interpretCProg (toSym input) evaluated funcMap :: ExceptT VerificationConditions UnionM a
+                  sp = spec (toSym input)
+               in case (p, sp) of
+                    (ExceptT (SingleU (Right v)), ExceptT (SingleU (Right sv))) -> (fromJust $ toCon v :: c) == fromJust (toCon sv)
+                    _ -> error "Bad"
+          )
       case r of
         Success {} -> check (i + 1) candidate
-        Failure _ _ _ _ _ curSeed curSize _ _ _ _ _ _ -> do
-          let input = toSym $ unGen inputGen curSeed curSize
-          return $ Right (input, i, case spec input of ExceptT (SingleU (Right v)) -> v; _ -> error "Bad")
+        Failure _ _ _ _ _ curSeed _ _ _ _ _ _ _ -> do
+          let input = toSym $ unGen inputGen curSeed i
+          case spec input of
+            ExceptT (SingleU (Right v)) -> return $ Right (input, i, v)
+            ExceptT (SingleU (Left AssumptionViolation)) -> check (i + 1) candidate
+
+{-
+          return $ Right (input, i, ; _ -> error "Bad")
+          -}
         _ -> error "???"
 
     guess :: Int -> [[a]] -> a -> SymBiMap -> SBVC.Query (SymBiMap, Either SolvingFailure Model)
@@ -309,6 +318,7 @@ cegisQuickCheck config spec numInputs inputGen maxSize prog funcMap gen = SBV.ru
         SBVC.Sat -> do
           md <- SBVC.getModel
           let model = parseModel config md newm
+          liftIO $ print (evaluateSymToCon model prog :: CProg cval c)
           return (newm, Right model)
         _ -> return (newm, Left $ sbvCheckSatResult r)
     loop ::

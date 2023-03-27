@@ -2,8 +2,12 @@ module Main where
 
 import Component (componentMain)
 import OOPSLA (oopslaMain)
+import Common.MainFunc
 
 main :: IO ()
-main = do
-  componentMain
-  oopslaMain
+main = mainFunc $ \case
+  "oopsla" -> oopslaMain
+  "component" -> componentMain
+  _ -> \_ -> do
+    oopslaMain ""
+    componentMain ""

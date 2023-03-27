@@ -1,4 +1,4 @@
-module Timing where
+module Common.Timing where
 
 import Control.Monad.IO.Class
 import System.Clock

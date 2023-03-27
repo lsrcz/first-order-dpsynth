@@ -1,5 +1,7 @@
 module Component where
 
+import Common.Spec
+import Common.Timing
 import Component.CEGIS
 import Component.ConcreteMiniProg
 import Component.ConcreteProg
@@ -9,13 +11,9 @@ import Component.Prog
 import Component.QuickCheck
 import Control.Monad.Except
 import Data.Proxy
-import Debug.Trace
-import GHC.TypeLits
 import Grisette
 import MSSSpec
-import Spec
 import Test.QuickCheck
-import Timing
 
 mssComponentCProg :: Num a => CProg Integer a
 mssComponentCProg =
@@ -95,8 +93,8 @@ restrictedMssSpec l = do
   mrgTraverse_ (\x -> symAssume $ x >=~ -8 &&~ x <=~ 8) $ join l
   spec apply allBitStrings l
 
-componentMain :: IO ()
-componentMain = do
+componentMain :: String -> IO ()
+componentMain _ = do
   putStrLn "MSS Component"
   let configb = precise boolector {Grisette.transcript = Just "b.smt2"}
   quickCheck

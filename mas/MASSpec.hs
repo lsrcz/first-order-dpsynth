@@ -1,8 +1,8 @@
 module MASSpec where
 
+import Common.Spec
 import Control.Monad.Except
 import Grisette
-import Spec
 
 masAlgo :: (Num a, Ord a) => [a] -> a
 masAlgo = go 0 0 0

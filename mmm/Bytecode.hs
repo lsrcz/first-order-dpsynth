@@ -4,12 +4,12 @@ import Bytecode.Instruction
 import Bytecode.Ops
 import Bytecode.Prog
 import Bytecode.Query
+import Common.Timing
 import Control.Monad.Except
 import Data.Foldable
 import Grisette
 import MMMSpec
 import Test.QuickCheck
-import Timing
 
 bytecodeSpec :: BytecodeProgSpec ()
 bytecodeSpec =
@@ -50,8 +50,8 @@ bytecodeSpec1 =
 bytecodeSketch1 :: BytecodeProg SymInteger
 bytecodeSketch1 = genSymSimple bytecodeSpec1 "bc"
 
-bytecodeMain :: IO ()
-bytecodeMain = do
+bytecodeMain :: String -> IO ()
+bytecodeMain _ = do
   let configb = precise boolector
 
   Just mmmIntSynthedBytecode :: Maybe (CBytecodeProg (IntN 6)) <-

@@ -1,6 +1,7 @@
 module Component where
 
 import ASSEMSpec
+import Common.Timing
 import Component.CEGIS
 import Component.ConcreteMiniProg
 import Component.ConcreteProg
@@ -11,11 +12,8 @@ import Component.QuickCheck (qcComponent4)
 import Control.Monad.Except
 import Data.List
 import Data.Proxy
-import Debug.Trace
 import Grisette
-import Timing
-import Test.QuickCheck.Gen
-import Test.QuickCheck (Arbitrary(arbitrary))
+import Test.QuickCheck
 
 assemComponentCProg :: Num a => CProg Integer a
 assemComponentCProg =
@@ -125,8 +123,8 @@ assemInputsGen e = do
   n <- getSize
   vectorOf 4 (vectorOf n $ chooseEnum e)
 
-componentMain :: IO ()
-componentMain = do
+componentMain :: String -> IO ()
+componentMain _ = do
   putStrLn "MAS Component"
   let configb = precise boolector {Grisette.transcript = Just "b.smt2"}
   qcComponent4 (Proxy @SymInteger) 17 8 8 assemAlgo assemComponentCProg
@@ -139,7 +137,7 @@ componentMain = do
         4
         (assemInputsGen (-8, 8))
         4
-        assemComponentProg'
+        assemComponentProg
         funcMap
         (simpleFresh ())
   print x
