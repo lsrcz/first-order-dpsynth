@@ -32,6 +32,8 @@ library
       Bytecode.Ops
       Bytecode.Prog
       Bytecode.Query
+      Common.FuncMap
+      Common.ListProg
       Common.MainFunc
       Common.Spec
       Common.T

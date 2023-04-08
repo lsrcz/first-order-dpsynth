@@ -1,10 +1,11 @@
 module Component.Ops where
 
-import Component.MiniProg
 import Control.Monad.Except
 import qualified Data.HashMap.Strict as M
 import Grisette
 import Common.T
+import Common.FuncMap
+import qualified Data.ByteString as B
 
 unaryFunc :: (forall m. (MonadError VerificationConditions m, MonadUnion m, Mergeable a) => a -> m a) -> Func a
 unaryFunc f = Func 1 False $ \case
@@ -16,7 +17,7 @@ binaryFunc comm f = Func 2 comm $ \case
   [a, b] -> f a b
   _ -> mrgThrowError AssertionViolation
 
-funcMap :: (Num a, SOrd a, SimpleMergeable a) => FuncMap a
+funcMap :: (Num a, SOrd a, SimpleMergeable a) => M.HashMap B.ByteString (Func a)
 funcMap =
   M.fromList
     [ ("id", unaryFunc mrgReturn),
@@ -67,7 +68,7 @@ mtBoolBinaryFunc comm f = Func 2 comm $ \case
       _ -> mrgThrowError AssertionViolation
   _ -> mrgThrowError AssertionViolation
 
-mtfuncMap :: (Num a, SOrd a, SimpleMergeable a) => FuncMap (MT a)
+mtfuncMap :: (Num a, SOrd a, SimpleMergeable a) => M.HashMap B.ByteString (Func (MT a))
 mtfuncMap =
   M.fromList
     [ ("id", mtIntUnaryFunc mrgReturn ),

@@ -11,24 +11,24 @@ import Control.Monad.Writer
 import GHC.Generics
 import GHC.Stack
 import Grisette
-import qualified Data.ByteString as B
 import Debug.Trace
 import Data.List
+import Common.FuncMap
 
-data Prog val a = Prog (AuxProg val a) (MiniProg val)
+data Prog op val a = Prog (AuxProg op val a) (MiniProg op val)
   deriving (Show, Generic)
-  deriving (EvaluateSym) via Default (Prog val a)
+  deriving (EvaluateSym) via Default (Prog op val a)
 
-data ProgSpecInit a = ProgSpecInit [a] [MiniProgSpec] MiniProgSpec
+data ProgSpecInit op a = ProgSpecInit [a] [MiniProgSpec op] (MiniProgSpec op)
 
 instance
-  ( GenSymSimple (AuxSpecInit a) (AuxProg val a),
-    GenSymSimple MiniProgSpec (MiniProg val)
+  ( GenSymSimple (AuxSpecInit op a) (AuxProg op val a),
+    GenSymSimple (MiniProgSpec op) (MiniProg op val)
   ) =>
-  GenSymSimple (ProgSpecInit a) (Prog val a)
+  GenSymSimple (ProgSpecInit op a) (Prog op val a)
   where
   simpleFresh (ProgSpecInit i m p) = do
-    auxprog :: AuxProg val a <- simpleFresh (AuxSpecInit i m)
+    auxprog :: AuxProg op val a <- simpleFresh (AuxSpecInit i m)
     finalprog <- simpleFresh p
     return $ Prog auxprog finalprog
 
@@ -47,17 +47,17 @@ instance GenSymSimple (ProgSpecInit a) (Prog (UnionM Val) a) where
     -}
 
 progWellFormedConstraints ::
-  (ValLike val, UnionLike m, MonadError VerificationConditions m) =>
+  (ValLike val, UnionLike m, MonadError VerificationConditions m, FuncMapLike op a fm, OpCode op g) =>
   Int ->
-  FuncMap a ->
-  Prog val a ->
+  fm ->
+  Prog op val a ->
   m ()
 progWellFormedConstraints numInputs fm (Prog aux finalprog) = do
   auxProgWellFormedConstraints numInputs fm aux
   miniProgWellFormedConstraints (numAux aux) fm finalprog
 
 interpretProg ::
-  forall m val a.
+  forall m val a op fm.
   ( HasCallStack,
     ValLike val,
     Show a,
@@ -67,11 +67,12 @@ interpretProg ::
     MonadFresh m,
     ExtractSymbolics a,
     SEq a,
-    Mergeable a
+    Mergeable a,
+    FuncMapLike op a fm
   ) =>
   [[a]] ->
-  Prog val a ->
-  FuncMap a ->
+  Prog op val a ->
+  fm ->
   m a ->
   m a
 interpretProg inputs (Prog aux finalprog) fm intermediateGen = do
@@ -85,24 +86,25 @@ type EnhancedOutputL val a = ([a], val)
 type EnhancedInputL val a = ([a], val)
 
 
-data EnhancedNodeL val a
-  = EnhancedNodeL B.ByteString (EnhancedOutputL val a) [EnhancedInputL val a]
+data EnhancedNodeL op val a
+  = EnhancedNodeL op (EnhancedOutputL val a) [EnhancedInputL val a]
   | InputNodeL [a] Int
   deriving (Show, Generic)
-  deriving (EvaluateSym) via (Default (EnhancedNodeL val a))
+  deriving (EvaluateSym) via (Default (EnhancedNodeL op val a))
 
-newtype EnhancedMiniProgL val a = EnhancedMiniProgL {enhancedNodesL :: [EnhancedNodeL val a]}
+newtype EnhancedMiniProgL op val a = EnhancedMiniProgL {enhancedNodesL :: [EnhancedNodeL op val a]}
   deriving (Show, Generic)
-  deriving (EvaluateSym) via (Default (EnhancedMiniProgL val a))
+  deriving (EvaluateSym) via (Default (EnhancedMiniProgL op val a))
 
-genEnhancedMiniProgL :: forall val m a. (ValLike val, MonadFresh m, MonadUnion m, MonadWriter IntermediateVarSet m, ExtractSymbolics a) => [[a]] -> MiniProg val -> m a -> m (EnhancedMiniProgL val a)
+genEnhancedMiniProgL :: forall val m a op. (ValLike val, MonadFresh m, MonadUnion m, MonadWriter IntermediateVarSet m, ExtractSymbolics a) => [[a]] ->
+  MiniProg op val -> m a -> m (EnhancedMiniProgL op val a)
 genEnhancedMiniProgL inputs (MiniProg prog _ _) intermediateGen = EnhancedMiniProgL <$> ((++) <$> goInputs 0 inputs <*> go prog)
   where
     goInputs _ [] = return []
     goInputs pos (x : xs) = do
       r <- goInputs (pos + 1) xs
       return (InputNodeL x pos : r)
-    go :: [Node val] -> m [EnhancedNodeL val a]
+    go :: [Node op val] -> m [EnhancedNodeL op val a]
     go [] = return []
     go (Node op pos nodeInputs : xs) = do
       r <- go xs
@@ -111,7 +113,7 @@ genEnhancedMiniProgL inputs (MiniProg prog _ _) intermediateGen = EnhancedMiniPr
       tell $ IntermediateVarSet $ extractSymbolics (ret, input1)
       return (EnhancedNodeL op (ret, pos) (zip input1 nodeInputs) : r)
 
-nodeValuesEnhancedMiniProgL :: ValLike val => EnhancedMiniProgL val a -> [([a], val)]
+nodeValuesEnhancedMiniProgL :: ValLike val => EnhancedMiniProgL op val a -> [([a], val)]
 nodeValuesEnhancedMiniProgL (EnhancedMiniProgL enodes) =
   ( \case
       EnhancedNodeL _ (vo, vov) _ -> (vo, vov)
@@ -120,9 +122,9 @@ nodeValuesEnhancedMiniProgL (EnhancedMiniProgL enodes) =
     <$> enodes
 
 connectedL ::
-  forall m val a.
-  (ValLike val, Show val, Show a, MonadUnion m, MonadError VerificationConditions m, SEq a) =>
-  EnhancedMiniProgL val a ->
+  forall m val a op.
+  (ValLike val, Show val, Show a, MonadUnion m, MonadError VerificationConditions m, SEq a, Show op) =>
+  EnhancedMiniProgL op val a ->
   m ()
 connectedL e@(EnhancedMiniProgL enodes) = trace (show enodes) $ trace (show outputs) $ trace (show inputs) $
   mrgTraverse_
@@ -141,7 +143,8 @@ connectedL e@(EnhancedMiniProgL enodes) = trace (show enodes) $ trace (show outp
       )
         =<< enodes
 
-semanticsCorrectL :: (MonadUnion m, Show a, Show val, MonadError VerificationConditions m, SEq a, Mergeable a) => FuncMap a -> EnhancedMiniProgL val a -> m ()
+semanticsCorrectL :: (MonadUnion m, Show a, Show val, MonadError VerificationConditions m, SEq a, Mergeable a, FuncMapLike op a fm) =>
+  fm -> EnhancedMiniProgL op val a -> m ()
 semanticsCorrectL fm (EnhancedMiniProgL enodes) = go enodes
   where
     go [] = mrgReturn ()
@@ -152,7 +155,7 @@ semanticsCorrectL fm (EnhancedMiniProgL enodes) = go enodes
       go xs
 
 assertMiniProgResultL ::
-  forall val a m.
+  forall val a m op fm.
   ( ValLike val,
     UnionLike m,
     MonadError VerificationConditions m,
@@ -162,12 +165,14 @@ assertMiniProgResultL ::
     SEq a,
     Mergeable a,
     Show a,
-    Show val
+    Show val,
+    Show op,
+    FuncMapLike op a fm
   ) =>
   [[a]] ->
   [a] ->
-  MiniProg val ->
-  FuncMap a ->
+  MiniProg op val ->
+  fm ->
   m a ->
   m ()
 assertMiniProgResultL inputs outputs prog@(MiniProg _ outputIdx _) fm intermediateGen = do
@@ -185,11 +190,11 @@ assertMiniProgResultL inputs outputs prog@(MiniProg _ outputIdx _) fm intermedia
 assertAuxProgResult :: (UnionLike m, ValLike val,
  MonadError VerificationConditions m, MonadFresh m,
  MonadWriter IntermediateVarSet m, ExtractSymbolics a, SEq a,
- Mergeable a, Show a, Show val) =>
+ Mergeable a, Show a, Show val, Show op, FuncMapLike op a fm) =>
   [[a]]
   -> [[a]]
-  -> AuxProg val a
-  -> FuncMap a
+  -> AuxProg op val a
+  -> fm
   -> m a
   -> m ()
 assertAuxProgResult inputs intermediates (AuxProg _ progs) fm intermediateGen = do
@@ -197,7 +202,7 @@ assertAuxProgResult inputs intermediates (AuxProg _ progs) fm intermediateGen = 
   mrgTraverse_ (\(p, i) -> assertMiniProgResultL (inputs ++ fmap init intermediates) i p fm intermediateGen) op
 
 assertProgResult ::
-  forall m val a.
+  forall m val a op fm.
   ( HasCallStack,
     ValLike val,
     Show a,
@@ -207,12 +212,12 @@ assertProgResult ::
     MonadFresh m,
     ExtractSymbolics a,
     SEq a,
-    Mergeable a, Show val
+    Mergeable a, Show val, Show op, FuncMapLike op a fm
   ) =>
   [[a]] ->
   a ->
-  Prog val a ->
-  FuncMap a ->
+  Prog op val a ->
+  fm ->
   m a ->
   m ()
 assertProgResult inputs result (Prog aux@(AuxProg auxInits _) finalprog) fm intermediateGen = do

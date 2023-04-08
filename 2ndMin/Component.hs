@@ -13,8 +13,9 @@ import Test.QuickCheck
 import Common.Timing
 import Component.CEGIS
 import Component.Ops
+import qualified Data.ByteString as B
 
-secondMinComponentCProg :: Num a => CProg (IntN 5) (CT a)
+secondMinComponentCProg :: Num a => CProg B.ByteString (IntN 5) (CT a)
 secondMinComponentCProg =
   CProg
     (CAuxProg[CInt 0, CInt 0]
@@ -27,7 +28,7 @@ secondMinComponentCProg =
       4])
     ( CMiniProg [] 1)
 
-secondMinComponentProg0 :: (Mergeable a, Num a) => Prog (SymIntN 5) (MT a)
+secondMinComponentProg0 :: (Mergeable a, Num a) => Prog B.ByteString (SymIntN 5) (MT a)
 secondMinComponentProg0 =
   Prog
     (AuxProg [mrgReturn $ TInt 0, mrgReturn $ TInt 0]
@@ -42,7 +43,7 @@ secondMinComponentProg0 =
       (4, 4)])
     ( MiniProg [] 1 (1,1))
 
-secondMinComponentProgSpec :: (Mergeable a, Num a) => ProgSpecInit (MT a)
+secondMinComponentProgSpec :: (Mergeable a, Num a) => ProgSpecInit B.ByteString (MT a)
 secondMinComponentProgSpec =
   ProgSpecInit
     [mrgReturn $ TInt 0, mrgReturn $ TInt 0]
@@ -58,7 +59,7 @@ secondMinComponentProgSpec =
       ]
     ( MiniProgSpec [] 2 0)
 
-secondMinComponentProgSpec' :: (Mergeable a, Num a) => ProgSpecInit (MT a)
+secondMinComponentProgSpec' :: (Mergeable a, Num a) => ProgSpecInit B.ByteString (MT a)
 secondMinComponentProgSpec' =
   ProgSpecInit
     [mrgReturn $ TInt 0, mrgReturn $ TInt 0]
@@ -91,8 +92,8 @@ secondMinComponentProgSpec' =
       3
       0)
 
-secondMinComponentProg :: forall a. (Num a, Mergeable a) => Prog (SymIntN 5) (MT a)
-secondMinComponentProg = genSymSimple (secondMinComponentProgSpec :: ProgSpecInit (MT a)) "prog"
+secondMinComponentProg :: forall a. (Num a, Mergeable a) => Prog B.ByteString (SymIntN 5) (MT a)
+secondMinComponentProg = genSymSimple (secondMinComponentProgSpec :: ProgSpecInit B.ByteString (MT a)) "prog"
 
 secondMinInputsGen :: Enum s => (s, s) -> Gen [[CT s]]
 secondMinInputsGen e = do
@@ -104,7 +105,7 @@ componentMain _ = do
   -- qcTComponent (Proxy @SymInteger) 17 16 2 4 secondMin secondMinComponentCProg 
 
   let configb = precise boolector {Grisette.transcript = Just "b.smt2"}
-  Right (_, x :: CProg (IntN 5) (CT (IntN 8))) <-
+  Right (_, x :: CProg B.ByteString (IntN 5) (CT (IntN 8))) <-
     timeItAll "cegis" $
       cegisQuickCheck
         interpretProg

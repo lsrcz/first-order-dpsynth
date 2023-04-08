@@ -13,8 +13,9 @@ import Control.Monad.Except
 import Data.Proxy
 import Grisette
 import MASSpec
+import qualified Data.ByteString as B
 
-masComponentCProg :: Num a => CProg Integer a
+masComponentCProg :: Num a => CProg B.ByteString Integer a
 masComponentCProg =
   CProg
     (CAuxProg [0, 0, 0]
@@ -42,7 +43,7 @@ masComponentCProg =
         4
     )
 
-masComponentProgSpec :: Num a => ProgSpecInit a
+masComponentProgSpec :: Num a => ProgSpecInit B.ByteString a
 masComponentProgSpec =
   ProgSpecInit
     [0, 0, 0]
@@ -74,8 +75,8 @@ masComponentProgSpec =
         1
     )
 
-masComponentProg :: forall a. (Num a) => Prog (SymIntN 5) a
-masComponentProg = genSymSimple (masComponentProgSpec :: ProgSpecInit a) "prog"
+masComponentProg :: forall a. (Num a) => Prog B.ByteString (SymIntN 5) a
+masComponentProg = genSymSimple (masComponentProgSpec :: ProgSpecInit B.ByteString a) "prog"
 
 restrictedMasSpec ::
   forall a e.
@@ -92,7 +93,7 @@ componentMain _ = do
   let configb = precise boolector {Grisette.transcript = Just "b.smt2"}
   qcComponent (Proxy @SymInteger) 17 8 8 masAlgo masComponentCProg
 
-  Right (_, x :: CProg (IntN 5) (IntN 8)) <- timeItAll "cegis" $ cegisCustomized configb restrictedMasSpec [[[]], [["a" :: SymIntN 8]], [["a", "b"]], [["a", "b", "c"]], [["a", "b", "c", "d"]]] masComponentProg funcMap (simpleFresh ())
+  Right (_, x :: CProg B.ByteString (IntN 5) (IntN 8)) <- timeItAll "cegis" $ cegisCustomized configb restrictedMasSpec [[[]], [["a" :: SymIntN 8]], [["a", "b"]], [["a", "b", "c"]], [["a", "b", "c", "d"]]] masComponentProg funcMap (simpleFresh ())
   print x
 
   qcComponent (Proxy @(SymIntN 8)) 17 8 8 masAlgo x

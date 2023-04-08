@@ -12,8 +12,9 @@ import MSSSpec
 import Test.QuickCheck
 import Component.AuxProg
 import Component.CEGISAux (cegisAuxQuickCheck, DistinguishingInputs (DistinguishingInputs))
+import qualified Data.ByteString as B
 
-mssComponentCProg :: Num a => CProg Integer a
+mssComponentCProg :: Num a => CProg B.ByteString Integer a
 mssComponentCProg =
   CProg
     (CAuxProg[0, 0]
@@ -32,7 +33,7 @@ mssComponentCProg =
         2
     )
 
-mssComponentCAuxProg :: forall a. (Num a) => AuxProg (SymIntN 5) a
+mssComponentCAuxProg :: forall a. (Num a) => AuxProg B.ByteString (SymIntN 5) a
 mssComponentCAuxProg = AuxProg[0, 0]
     [ MiniProg
         [ Node "zero" 3 [0],
@@ -48,7 +49,7 @@ mssComponentCAuxProg = AuxProg[0, 0]
     ]
 
 
-mssComponentAuxProgSpec :: Num a => AuxSpecInit a
+mssComponentAuxProgSpec :: Num a => AuxSpecInit B.ByteString a
 mssComponentAuxProgSpec =
   AuxSpecInit
     [0, 0]
@@ -93,8 +94,8 @@ mssComponentProgSpec' =
     (MiniProgSpec [ComponentSpec "max" 2] 2 0)
     -}
 
-mssComponentProg :: forall a. (Num a) => AuxProg (SymIntN 5) a
-mssComponentProg = genSymSimple (mssComponentAuxProgSpec :: AuxSpecInit a) "prog"
+mssComponentProg :: forall a. (Num a) => AuxProg B.ByteString (SymIntN 5) a
+mssComponentProg = genSymSimple (mssComponentAuxProgSpec :: AuxSpecInit B.ByteString a) "prog"
 
 {-
 mssComponentProg' :: forall a. (Num a) => Prog (SymIntN 5) a
@@ -130,7 +131,7 @@ componentAuxMain _ = do
     )
     -}
 
-  Right (_, x :: CAuxProg (IntN 5) (IntN 8)) <- timeItAll "cegis" $
+  Right (_, x :: CAuxProg B.ByteString (IntN 5) (IntN 8)) <- timeItAll "cegis" $
     cegisAuxQuickCheck configb restrictedMssSpec 1 (mssAuxInputsGen (-8, 8)) 4 (mssComponentProg @(SymIntN 8)) funcMap (simpleFresh ())
   print x
 

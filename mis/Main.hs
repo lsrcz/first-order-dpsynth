@@ -23,6 +23,7 @@ import OOPSLA.Query
 import Test.QuickCheck
 import Bytecode.Query
 import Bytecode.Ops
+import qualified Data.ByteString as B
 
 mis :: (Num a) => ConProgram a
 mis =
@@ -90,7 +91,7 @@ safeMisSpecV = safeSpecV safeApply allBitStrings
 
 -- Component
 
-misComponentCProg :: Num a => CProg CVal a
+misComponentCProg :: Num a => CProg B.ByteString CVal a
 misComponentCProg =
   CProg
     (CAuxProg[0, 0]
@@ -99,7 +100,7 @@ misComponentCProg =
     ])
     (CMiniProg [CNode "max" (CInternal 0) [CInput 0, CInput 1]] (CInternal 0))
 
-misComponentProgSpec :: Num a => ProgSpecInit a
+misComponentProgSpec :: Num a => ProgSpecInit B.ByteString a
 misComponentProgSpec =
   ProgSpecInit
     [0, 0]
@@ -108,10 +109,10 @@ misComponentProgSpec =
     ]
     (MiniProgSpec [ComponentSpec "max" 2] 2 0)
 
-misComponentProg :: forall a. (Num a) => Prog SymInteger a
+misComponentProg :: forall a. (Num a) => Prog B.ByteString SymInteger a
 misComponentProg = genSymSimple (misComponentProgSpec @a) "prog"
 
-misComponentProgSpec1 :: Num a => ProgSpecInit a
+misComponentProgSpec1 :: Num a => ProgSpecInit B.ByteString a
 misComponentProgSpec1 =
   ProgSpecInit
     [0, 0]
@@ -120,10 +121,10 @@ misComponentProgSpec1 =
     ]
     (MiniProgSpec [ComponentSpec "max" 2] 2 0)
 
-misComponentProg1 :: forall a. (Num a) => Prog SymInteger a
+misComponentProg1 :: forall a. (Num a) => Prog B.ByteString SymInteger a
 misComponentProg1 = genSymSimple (misComponentProgSpec1 @a) "prog"
 
-misComponentProg2 :: forall a. (Num a) => Prog (SymIntN 5) a
+misComponentProg2 :: forall a. (Num a) => Prog B.ByteString (SymIntN 5) a
 misComponentProg2 = genSymSimple (misComponentProgSpec1 @a) "prog"
 
 {-
@@ -185,7 +186,7 @@ main = do
 
   -- print i1
 
-  Right (_, x :: CProg (IntN 5) (IntN 4)) <- timeItAll "cegis" $ cegisCustomized (precise boolector) safeMisSpec [[[]], [["a" :: SymIntN 4]], [["a", "b"]], [["a", "b", "c"]], [["a", "b", "c", "d"]]] misComponentProg2 funcMap (simpleFresh ())
+  Right (_, x :: CProg B.ByteString (IntN 5) (IntN 4)) <- timeItAll "cegis" $ cegisCustomized (precise boolector) safeMisSpec [[[]], [["a" :: SymIntN 4]], [["a", "b"]], [["a", "b", "c"]], [["a", "b", "c", "d"]]] misComponentProg2 funcMap (simpleFresh ())
   print x
 
   {-
@@ -196,7 +197,7 @@ main = do
       )
       -}
 
-  Right (_, x :: CProg Integer Integer) <- timeItAll "cegis" $ cegisCustomized (precise z3) misSpec [[[]], [[a]], [[a, b]], [[a, b, c]], [[a, b, c, d]]] misComponentProg1 funcMap gen
+  Right (_, x :: CProg B.ByteString Integer Integer) <- timeItAll "cegis" $ cegisCustomized (precise z3) misSpec [[[]], [[a]], [[a, b]], [[a, b, c]], [[a, b, c, d]]] misComponentProg1 funcMap gen
 
   quickCheck
     ( \(l :: [Integer]) ->
@@ -204,7 +205,7 @@ main = do
           == mrgReturn (toSym $ misAlgo l :: SymInteger)
     )
 
-  Right (_, x :: CProg Integer Integer) <- timeItAll "cegis" $ cegisCustomized' (precise z3) misSpec [input] misComponentProg1 funcMap gen
+  Right (_, x :: CProg B.ByteString Integer Integer) <- timeItAll "cegis" $ cegisCustomized' (precise z3) misSpec [input] misComponentProg1 funcMap gen
 
   quickCheck
     ( \(l :: [Integer]) ->

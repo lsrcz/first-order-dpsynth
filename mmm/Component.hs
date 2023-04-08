@@ -16,8 +16,9 @@ import Data.Proxy
 import Grisette
 import MMMSpec
 import Test.QuickCheck
+import qualified Data.ByteString as B
 
-mmmComponentCProg :: Num a => CProg CVal a
+mmmComponentCProg :: Num a => CProg B.ByteString CVal a
 mmmComponentCProg =
   CProg
     (CAuxProg [0, 0, 0]
@@ -45,7 +46,7 @@ mmmComponentCProg =
         (CInternal 1)
     )
 
-mmmComponentCProg' :: Num a => CProg Integer a
+mmmComponentCProg' :: Num a => CProg B.ByteString Integer a
 mmmComponentCProg' =
   CProg
     (CAuxProg [0, 0, 0]
@@ -73,7 +74,7 @@ mmmComponentCProg' =
         4
     )
 
-mmmComponentProgSpec :: Num a => ProgSpecInit a
+mmmComponentProgSpec :: Num a => ProgSpecInit B.ByteString a
 mmmComponentProgSpec =
   ProgSpecInit
     [0, 0, 0]
@@ -97,14 +98,14 @@ mmmComponentProgSpec =
     ]
     (MiniProgSpec [ComponentSpec "max" 2, ComponentSpec "max" 2] 3 1)
 
-mmmComponentProg1 :: forall a. (Num a) => Prog (UnionM Val) a
-mmmComponentProg1 = genSymSimple (mmmComponentProgSpec :: ProgSpecInit a) "prog"
+mmmComponentProg1 :: forall a. (Num a) => Prog B.ByteString (UnionM Val) a
+mmmComponentProg1 = genSymSimple (mmmComponentProgSpec :: ProgSpecInit B.ByteString a) "prog"
 
-mmmComponentProg1' :: forall a. (Num a) => Prog SymInteger a
-mmmComponentProg1' = genSymSimple (mmmComponentProgSpec :: ProgSpecInit a) "prog"
+mmmComponentProg1' :: forall a. (Num a) => Prog B.ByteString SymInteger a
+mmmComponentProg1' = genSymSimple (mmmComponentProgSpec :: ProgSpecInit B.ByteString a) "prog"
 
-mmmComponentProg1'' :: forall a. (Num a) => Prog (SymIntN 5) a
-mmmComponentProg1'' = genSymSimple (mmmComponentProgSpec :: ProgSpecInit a) "prog"
+mmmComponentProg1'' :: forall a. (Num a) => Prog B.ByteString (SymIntN 5) a
+mmmComponentProg1'' = genSymSimple (mmmComponentProgSpec :: ProgSpecInit B.ByteString a) "prog"
 
 restrictedMmmSpec ::
   forall a e.
@@ -126,7 +127,7 @@ componentMain _ = do
 
   let configb = precise boolector {Grisette.transcript = Just "b.smt2"}
 
-  Right (_, x :: CProg (IntN 5) (IntN 8)) <-
+  Right (_, x :: CProg B.ByteString (IntN 5) (IntN 8)) <-
     timeItAll "cegis" $
       cegisQuickCheckAssert
         configb
@@ -143,12 +144,12 @@ componentMain _ = do
 
 
 
-  Right (_, x :: CProg (IntN 5) (IntN 8)) <- timeItAll "cegis" $ cegisCustomized configb restrictedMmmSpec [[[]], [[-1]], [[1]], [[-1, 1]], [[1,1]], [[7]], [[1,-6]], [[7,2]], [[1,-6,2]], [[2,0,2]], [[2,0,2,1]], [[-3,1]], [[-3,1,1]], [["a" :: SymIntN 8]], [["a", "b"]], [["a", "b", "c"]], [["a", "b", "c", "d"]]] mmmComponentProg1'' funcMap (simpleFresh ())
+  Right (_, x :: CProg B.ByteString (IntN 5) (IntN 8)) <- timeItAll "cegis" $ cegisCustomized configb restrictedMmmSpec [[[]], [[-1]], [[1]], [[-1, 1]], [[1,1]], [[7]], [[1,-6]], [[7,2]], [[1,-6,2]], [[2,0,2]], [[2,0,2,1]], [[-3,1]], [[-3,1,1]], [["a" :: SymIntN 8]], [["a", "b"]], [["a", "b", "c"]], [["a", "b", "c", "d"]]] mmmComponentProg1'' funcMap (simpleFresh ())
   print x
 
   qcComponent (Proxy @(SymIntN 8)) 17 8 8 mmmAlgo x
 
-  Right (_, x :: CProg Integer Integer) <- cegisCustomized config mmmSpec [[[]], [["a" :: SymInteger]], [["a", "b"]], [["a", "b", "c"]], [["a", "b", "c", "d"]]] mmmComponentProg1' funcMap (simpleFresh ())
+  Right (_, x :: CProg B.ByteString Integer Integer) <- cegisCustomized config mmmSpec [[[]], [["a" :: SymInteger]], [["a", "b"]], [["a", "b", "c"]], [["a", "b", "c", "d"]]] mmmComponentProg1' funcMap (simpleFresh ())
 
   print x
   quickCheck
@@ -157,7 +158,7 @@ componentMain _ = do
           == mrgReturn (toSym $ mmmAlgo l :: SymInteger)
     )
 
-  Right (_, x :: CProg CVal Integer) <- cegisCustomized config mmmSpec [[[]], [["a" :: SymInteger]], [["a", "b"]], [["a", "b", "c"]], [["a", "b", "c", "d"]]] mmmComponentProg1 funcMap (simpleFresh ())
+  Right (_, x :: CProg B.ByteString CVal Integer) <- cegisCustomized config mmmSpec [[[]], [["a" :: SymInteger]], [["a", "b"]], [["a", "b", "c"]], [["a", "b", "c", "d"]]] mmmComponentProg1 funcMap (simpleFresh ())
 
   print x
   quickCheck
@@ -166,7 +167,7 @@ componentMain _ = do
           == mrgReturn (toSym $ mmmAlgo l :: SymInteger)
     )
 
-  Right (_, x :: CProg CVal Integer) <- cegisCustomized' config mmmSpec [["a" :: SymInteger, "b", "c"]] mmmComponentProg1 funcMap (simpleFresh ())
+  Right (_, x :: CProg B.ByteString CVal Integer) <- cegisCustomized' config mmmSpec [["a" :: SymInteger, "b", "c"]] mmmComponentProg1 funcMap (simpleFresh ())
   print x
   quickCheck
     ( \(l :: [Integer]) ->
@@ -176,6 +177,6 @@ componentMain _ = do
 
   quickCheck
     ( \(l :: [Integer]) ->
-        (interpretCProg [toSym l] (mmmComponentCProg :: CProg CVal Integer) funcMap :: ExceptT VerificationConditions UnionM SymInteger)
+        (interpretCProg [toSym l] (mmmComponentCProg :: CProg B.ByteString CVal Integer) funcMap :: ExceptT VerificationConditions UnionM SymInteger)
           == mrgReturn (toSym $ mmmAlgo l :: SymInteger)
     )

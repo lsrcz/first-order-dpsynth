@@ -4,7 +4,6 @@ import Common.Timing
 import Common.Val
 import Component.ConcreteProg
 import Component.IntermediateVarSet
-import Component.MiniProg
 import Component.Prog
 import Control.Monad.Except
 import Control.Monad.Writer
@@ -15,8 +14,8 @@ import qualified Data.SBV.Control as SBVC
 import Grisette
 import Grisette.Backend.SBV.Data.SMT.Lowering
 import Test.QuickCheck
-import Test.QuickCheck.Gen
 import Data.Either
+import Common.FuncMap
 
 sbvCheckSatResult :: SBVC.CheckSatResult -> SolvingFailure
 sbvCheckSatResult SBVC.Sat = error "Should not happen"
@@ -27,15 +26,18 @@ sbvCheckSatResult SBVC.Unk = Unk
 type M a = FreshT (ExceptT VerificationConditions (WriterT IntermediateVarSet UnionM)) a
 
 cegisCustomized' ::
-  forall n cval val a c.
-  (ValLike val, CValLike cval, ToCon a c, EvaluateSym val, ToCon val cval, ExtractSymbolics a, EvaluateSym a, Mergeable a, SEq a, Show a, ToSym a a, ToCon a a) =>
+  forall n cval val a c op fm g.
+  (ValLike val, CValLike cval, ToCon a c,
+  EvaluateSym val, ToCon val cval, ExtractSymbolics a, EvaluateSym a,
+  Mergeable a, SEq a, Show a, ToSym a a, ToCon a a, FuncMapLike op a fm,
+  EvaluateSym op, OpCode op g, ToCon op op) =>
   GrisetteSMTConfig n ->
   ([[a]] -> ExceptT VerificationConditions UnionM a) ->
   [[a]] ->
-  Prog val a ->
-  FuncMap a ->
+  Prog op val a ->
+  fm ->
   M a ->
-  IO (Either SolvingFailure ([[[a]]], CProg cval c))
+  IO (Either SolvingFailure ([[[a]]], CProg op cval c))
 cegisCustomized' config spec inputs prog funcMap gen = SBV.runSMTWith ((sbvConfig config) {transcript = Just "guess.smt2"}) $ do
   let SymBool t = {-phiRight &&~-} wellFormed
   (newm, a) <- lowerSinglePrim config t
@@ -78,7 +80,7 @@ cegisCustomized' config spec inputs prog funcMap gen = SBV.runSMTWith ((sbvConfi
 
     check :: Model -> IO (Either SolvingFailure ([[a]], a))
     check candidate = do
-      let evaluated :: CProg cval a = evaluateSymToCon candidate prog
+      let evaluated :: CProg op cval a = evaluateSymToCon candidate prog
       let evr :: ExceptT VerificationConditions UnionM a = interpretCProg inputs evaluated funcMap
       let spr :: ExceptT VerificationConditions UnionM a = spec inputs
 
@@ -119,7 +121,7 @@ cegisCustomized' config spec inputs prog funcMap gen = SBV.runSMTWith ((sbvConfi
       Either SolvingFailure Model ->
       [[[a]]] ->
       SymBiMap ->
-      SBVC.Query (SymBiMap, Either SolvingFailure ([[[a]]], CProg cval c))
+      SBVC.Query (SymBiMap, Either SolvingFailure ([[[a]]], CProg op cval c))
     loop idx (Right mo) cexs origm = do
       r <- liftIO $ timeItAll "CHECK" $ check mo
       case r of
@@ -131,15 +133,18 @@ cegisCustomized' config spec inputs prog funcMap gen = SBV.runSMTWith ((sbvConfi
     loop _ (Left v) _ origm = return (origm, Left v)
 
 cegisCustomized ::
-  forall n cval val a c.
-  (ValLike val, Show cval, CValLike cval, ToCon a c, EvaluateSym val, ToCon val cval, ExtractSymbolics a, EvaluateSym a, Mergeable a, SEq a, Show a, ToSym a a, ToCon a a) =>
+  forall n cval val a c op fm g.
+  (ValLike val, Show cval, CValLike cval, ToCon a c, EvaluateSym val,
+   ToCon val cval, ExtractSymbolics a, EvaluateSym a, Mergeable a, SEq a, Show a, ToSym a a, ToCon a a,
+   FuncMapLike op a fm,
+  OpCode op g) =>
   GrisetteSMTConfig n ->
   ([[a]] -> ExceptT VerificationConditions UnionM a) ->
   [[[a]]] ->
-  Prog val a ->
-  FuncMap a ->
+  Prog op val a ->
+  fm ->
   M a ->
-  IO (Either SolvingFailure ([[[a]]], CProg cval c))
+  IO (Either SolvingFailure ([[[a]]], CProg op cval c))
 cegisCustomized config spec inputs prog funcMap gen = SBV.runSMTWith (sbvConfig config) {transcript = Just "guess.smt2"} $ do
   let SymBool t = wellFormed
   (newm, a) <- lowerSinglePrim config t
@@ -177,7 +182,7 @@ cegisCustomized config spec inputs prog funcMap gen = SBV.runSMTWith (sbvConfig 
     check :: [[[a]]] -> Model -> IO (Either SolvingFailure ([[a]], [[[a]]], a))
     check [] _ = return (Left Unsat)
     check (nextInput : remainingInputs) candidate = do
-      let evaluated :: CProg cval a = evaluateSymToCon candidate prog
+      let evaluated :: CProg op cval a = evaluateSymToCon candidate prog
       let evr :: ExceptT VerificationConditions UnionM a = interpretCProg nextInput evaluated funcMap
       let spr :: ExceptT VerificationConditions UnionM a = spec nextInput
 
@@ -223,7 +228,7 @@ cegisCustomized config spec inputs prog funcMap gen = SBV.runSMTWith (sbvConfig 
       [[[a]]] ->
       [[[a]]] ->
       SymBiMap ->
-      SBVC.Query (SymBiMap, Either SolvingFailure ([[[a]]], CProg cval c))
+      SBVC.Query (SymBiMap, Either SolvingFailure ([[[a]]], CProg op cval c))
     loop idx (Right mo) remainingInputs cexs origm = do
       r <- liftIO $ timeItAll "CHECK" $ check remainingInputs mo
       case r of
@@ -235,18 +240,21 @@ cegisCustomized config spec inputs prog funcMap gen = SBV.runSMTWith (sbvConfig 
     loop _ (Left v) _ _ origm = return (origm, Left v)
 
 cegisQuickCheck ::
-  forall n cval val a c.
-  (ValLike val, Show cval, CValLike cval, ToCon a c, Show c, ToSym c a, Eq c, EvaluateSym val, ToCon val cval, ExtractSymbolics a, EvaluateSym a, Mergeable a, SEq a, Show a, ToSym a a, ToCon a a, Read c) =>
-  ([[a]] -> Prog val a -> FuncMap a -> M a -> M a) ->
+  forall n cval val a c op fm g.
+  (ValLike val, Show cval, CValLike cval, ToCon a c, Show c, ToSym c a, Eq c, EvaluateSym val,
+  ToCon val cval, ExtractSymbolics a, EvaluateSym a, Mergeable a, SEq a, Show a, ToSym a a, ToCon a a, Read c,
+  FuncMapLike op a fm,
+  OpCode op g) =>
+  ([[a]] -> Prog op val a -> fm -> M a -> M a) ->
   GrisetteSMTConfig n ->
   ([[a]] -> ExceptT VerificationConditions UnionM a) ->
   Int ->
   Gen [[c]] ->
   Int ->
-  Prog val a ->
-  FuncMap a ->
+  Prog op val a ->
+  fm ->
   M a ->
-  IO (Either SolvingFailure ([[[a]]], CProg cval c))
+  IO (Either SolvingFailure ([[[a]]], CProg op cval c))
 cegisQuickCheck interpreter config spec numInputs inputGen maxGenSize prog funcMap gen = SBV.runSMTWith (sbvConfig config) {transcript = Just "guess.smt2"} $ do
   let SymBool t = wellFormed
   (newm, a) <- lowerSinglePrim config t
@@ -284,7 +292,7 @@ cegisQuickCheck interpreter config spec numInputs inputGen maxGenSize prog funcM
     check :: Int -> Model -> IO (Either SolvingFailure ([[a]], Int, a))
     check i _ | i > maxGenSize = return (Left Unsat)
     check i candidate = do
-      let evaluated :: CProg cval a = evaluateSymToCon candidate prog
+      let evaluated :: CProg op cval a = evaluateSymToCon candidate prog
       r <-
         quickCheckWithResult
           (stdArgs {maxSize = i, maxSuccess = 1000, chatty = False})
@@ -321,7 +329,7 @@ cegisQuickCheck interpreter config spec numInputs inputGen maxGenSize prog funcM
         SBVC.Sat -> do
           md <- SBVC.getModel
           let model = parseModel config md newm
-          liftIO $ print (evaluateSymToCon model prog :: CProg cval c)
+          liftIO $ print (evaluateSymToCon model prog :: CProg op cval c)
           return (newm, Right model)
         _ -> return (newm, Left $ sbvCheckSatResult r)
     loop ::
@@ -331,7 +339,7 @@ cegisQuickCheck interpreter config spec numInputs inputGen maxGenSize prog funcM
       -- [[[a]]] ->
       [[[a]]] ->
       SymBiMap ->
-      SBVC.Query (SymBiMap, Either SolvingFailure ([[[a]]], CProg cval c))
+      SBVC.Query (SymBiMap, Either SolvingFailure ([[[a]]], CProg op cval c))
     loop idx (Right mo) curSize cexs origm = do
       r <- liftIO $ timeItAll "CHECK" $ check curSize mo
       case r of
@@ -454,17 +462,21 @@ cegisQuickCheckWithSpec interpreter config spec numInputs inputGen maxGenSize pr
     -}
 
 cegisQuickCheckAssert ::
-  forall n cval val a c.
-  (ValLike val, Show val, Show cval, CValLike cval, ToCon a c, Show c, ToSym c a, Eq c, EvaluateSym val, ToCon val cval, ExtractSymbolics a, EvaluateSym a, Mergeable a, SEq a, Show a, ToSym a a, ToCon a a, Read c) =>
+  forall n cval val a c op fm g.
+  (ValLike val, Show val, Show cval, CValLike cval, ToCon a c, Show c, ToSym c a, Eq c, EvaluateSym val, ToCon val cval,
+   ExtractSymbolics a, EvaluateSym a, Mergeable a, SEq a, Show a, ToSym a a, ToCon a a, Read c,
+  FuncMapLike op a fm,
+  OpCode op g) =>
+
   GrisetteSMTConfig n ->
   ([[a]] -> ExceptT VerificationConditions UnionM a) ->
   Int ->
   Gen [[c]] ->
   Int ->
-  Prog val a ->
-  FuncMap a ->
+  Prog op val a ->
+  fm ->
   M a ->
-  IO (Either SolvingFailure ([[[a]]], CProg cval c))
+  IO (Either SolvingFailure ([[[a]]], CProg op cval c))
 cegisQuickCheckAssert config spec numInputs inputGen maxGenSize prog funcMap gen = SBV.runSMTWith (sbvConfig config) {transcript = Just "guess.smt2"} $ do
   let SymBool t = wellFormed
   (newm, a) <- lowerSinglePrim config t
@@ -502,7 +514,7 @@ cegisQuickCheckAssert config spec numInputs inputGen maxGenSize prog funcMap gen
     check :: Int -> Model -> IO (Either SolvingFailure ([[a]], Int, a))
     check i _ | i > maxGenSize = return (Left Unsat)
     check i candidate = do
-      let evaluated :: CProg cval a = evaluateSymToCon candidate prog
+      let evaluated :: CProg op cval a = evaluateSymToCon candidate prog
       r <-
         quickCheckWithResult
           (stdArgs {maxSize = i, maxSuccess = 1000, chatty = False})
@@ -539,7 +551,7 @@ cegisQuickCheckAssert config spec numInputs inputGen maxGenSize prog funcMap gen
         SBVC.Sat -> do
           md <- SBVC.getModel
           let model = parseModel config md newm
-          liftIO $ print (evaluateSymToCon model prog :: CProg cval c)
+          liftIO $ print (evaluateSymToCon model prog :: CProg op cval c)
           return (newm, Right model)
         _ -> return (newm, Left $ sbvCheckSatResult r)
     loop ::
@@ -549,7 +561,7 @@ cegisQuickCheckAssert config spec numInputs inputGen maxGenSize prog funcMap gen
       -- [[[a]]] ->
       [[[a]]] ->
       SymBiMap ->
-      SBVC.Query (SymBiMap, Either SolvingFailure ([[[a]]], CProg cval c))
+      SBVC.Query (SymBiMap, Either SolvingFailure ([[[a]]], CProg op cval c))
     loop idx (Right mo) curSize cexs origm = do
       r <- liftIO $ timeItAll "CHECK" $ check curSize mo
       case r of

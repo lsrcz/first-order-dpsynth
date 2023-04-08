@@ -9,6 +9,7 @@ import Debug.Trace
 import Grisette
 import Test.QuickCheck
 import Common.T
+import qualified Data.ByteString as B
 
 qcComponent ::
   forall v i s.
@@ -26,7 +27,7 @@ qcComponent ::
   Integer ->
   Integer ->
   ([Integer] -> Integer) ->
-  CProg v i ->
+  CProg B.ByteString v i ->
   IO ()
 qcComponent _ m off n algo p =
   quickCheck
@@ -59,7 +60,7 @@ qcComponent4 ::
   Integer ->
   Integer ->
   ([[Integer]] -> Integer) ->
-  CProg v i ->
+  CProg B.ByteString v i ->
   IO ()
 qcComponent4 _ m off n algo p =
   quickCheck
@@ -87,7 +88,7 @@ qcTComponent ::
   Integer ->
   Integer ->
   ([Integer] -> Integer) ->
-  CProg v (CT i) ->
+  CProg B.ByteString v (CT i) ->
   IO ()
 qcTComponent _ m off minListSize maxListSize algo p =
   quickCheck

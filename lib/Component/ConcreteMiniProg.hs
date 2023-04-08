@@ -3,32 +3,34 @@ module Component.ConcreteMiniProg where
 import Common.Val
 import Component.MiniProg
 import Control.Monad.Except
-import qualified Data.ByteString as B
-import qualified Data.HashMap.Strict as M
 import Data.List (sortBy)
 import GHC.Generics
 import Grisette
+import Common.FuncMap
 
-data CNode cval = CNode B.ByteString cval [cval]
+data CNode op cval = CNode op cval [cval]
   deriving (Generic, Show)
-  deriving (ToCon (Node val)) via (Default (CNode cval))
 
-data CMiniProg cval = CMiniProg {cnodes :: [CNode cval], output :: cval}
+deriving via (Default (CNode op cval))
+  instance (ToCon op op, ToCon val cval) => ToCon (Node op val) (CNode op cval)
+
+data CMiniProg op cval = CMiniProg {cnodes :: [CNode op cval], output :: cval}
   deriving (Generic, Show)
 
 -- deriving (ToCon (MiniProg val)) via (Default (CMiniProg cval))
 
-instance ToCon val cval => ToCon (MiniProg val) (CMiniProg cval) where
+instance (ToCon op op, ToCon val cval) => ToCon (MiniProg op val) (CMiniProg op cval) where
   toCon (MiniProg n o _) = do
     nc <- toCon n
     no <- toCon o
     return $ CMiniProg nc no
 
-interpretCMiniProg :: (CValLike cval, MonadUnion m, Mergeable a, MonadError VerificationConditions m) => [a] -> CMiniProg cval -> FuncMap a -> m a
+interpretCMiniProg :: (CValLike cval, MonadUnion m, Mergeable a, MonadError VerificationConditions m, FuncMapLike op a fm) =>
+  [a] -> CMiniProg op cval -> fm -> m a
 interpretCMiniProg inputs (CMiniProg ns o) fm = go [] s
   where
     s = sortBy (\(CNode _ r1 _) (CNode _ r2 _) -> compare r1 r2) ns
     go reg [] = mrgReturn $ getCVal inputs reg o
     go reg (CNode op _ nodeInputs : xs) = do
-      r <- case fm M.! op of Func _ _ f -> f $ getCVal inputs reg <$> nodeInputs
+      r <- case getFunc op fm of Func _ _ f -> f $ getCVal inputs reg <$> nodeInputs
       go (reg ++ [r]) xs

@@ -13,9 +13,10 @@ import Control.Monad.Except
 import Data.Proxy
 import Grisette
 import MSSSpec
+import qualified Data.ByteString as B
 import Test.QuickCheck
 
-mssComponentCProg :: Num a => CProg Integer a
+mssComponentCProg :: Num a => CProg B.ByteString Integer a
 mssComponentCProg =
   CProg
     (CAuxProg[0, 0]
@@ -34,7 +35,7 @@ mssComponentCProg =
         2
     )
 
-mssComponentCProg' :: Num a => CProg Integer a
+mssComponentCProg' :: Num a => CProg B.ByteString Integer a
 mssComponentCProg' =
   CProg
     (CAuxProg[0, 0]
@@ -53,7 +54,7 @@ mssComponentCProg' =
         2
     )
 
-mssComponentProgSpec :: Num a => ProgSpecInit a
+mssComponentProgSpec :: Num a => ProgSpecInit B.ByteString a
 mssComponentProgSpec =
   ProgSpecInit
     [0, 0]
@@ -72,7 +73,7 @@ mssComponentProgSpec =
     ]
     (MiniProgSpec [ComponentSpec "max" 2] 2 0)
 
-mssComponentProgSpec' :: Num a => ProgSpecInit a
+mssComponentProgSpec' :: Num a => ProgSpecInit B.ByteString a
 mssComponentProgSpec' =
   ProgSpecInit
     [0, 0]
@@ -97,11 +98,11 @@ mssComponentProgSpec' =
     ]
     (MiniProgSpec [ComponentSpec "max" 2] 2 0)
 
-mssComponentProg :: forall a. (Num a) => Prog (SymIntN 5) a
-mssComponentProg = genSymSimple (mssComponentProgSpec :: ProgSpecInit a) "prog"
+mssComponentProg :: forall a. (Num a) => Prog B.ByteString (SymIntN 5) a
+mssComponentProg = genSymSimple (mssComponentProgSpec :: ProgSpecInit B.ByteString a) "prog"
 
-mssComponentProg' :: forall a. (Num a) => Prog (SymIntN 5) a
-mssComponentProg' = genSymSimple (mssComponentProgSpec' :: ProgSpecInit a) "prog"
+mssComponentProg' :: forall a. (Num a) => Prog B.ByteString (SymIntN 5) a
+mssComponentProg' = genSymSimple (mssComponentProgSpec' :: ProgSpecInit B.ByteString a) "prog"
 
 restrictedMssSpec ::
   forall a e.
@@ -122,12 +123,12 @@ componentMain _ = do
           == mrgReturn (toSym $ mssAlgo l :: SymInteger)
     )
 
-  Right (_, x :: CProg (IntN 5) (IntN 8)) <- timeItAll "cegis" $ cegisCustomized configb restrictedMssSpec [[[]], [["a" :: SymIntN 8]], [["a", "b"]], [["a", "b", "c"]], [["a", "b", "c", "d"]]] mssComponentProg funcMap (simpleFresh ())
+  Right (_, x :: CProg B.ByteString (IntN 5) (IntN 8)) <- timeItAll "cegis" $ cegisCustomized configb restrictedMssSpec [[[]], [["a" :: SymIntN 8]], [["a", "b"]], [["a", "b", "c"]], [["a", "b", "c", "d"]]] mssComponentProg funcMap (simpleFresh ())
   print x
 
   qcComponent (Proxy @(SymIntN 8)) 17 8 8 mssAlgo x
 
-  Right (_, x :: CProg (IntN 5) (IntN 8)) <- timeItAll "cegis" $ cegisCustomized configb restrictedMssSpec [[[]], [["a" :: SymIntN 8]], [["a", "b"]], [["a", "b", "c"]], [["a", "b", "c", "d"]]] mssComponentProg' funcMap (simpleFresh ())
+  Right (_, x :: CProg B.ByteString (IntN 5) (IntN 8)) <- timeItAll "cegis" $ cegisCustomized configb restrictedMssSpec [[[]], [["a" :: SymIntN 8]], [["a", "b"]], [["a", "b", "c"]], [["a", "b", "c", "d"]]] mssComponentProg' funcMap (simpleFresh ())
   print x
 
   qcComponent (Proxy @(SymIntN 8)) 17 8 8 mssAlgo x

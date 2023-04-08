@@ -14,8 +14,9 @@ import Data.List
 import Data.Proxy
 import Grisette
 import Test.QuickCheck
+import qualified Data.ByteString as B
 
-assemComponentCProg :: Num a => CProg Integer a
+assemComponentCProg :: Num a => CProg B.ByteString Integer a
 assemComponentCProg =
   CProg
     (CAuxProg[0, 0]
@@ -38,7 +39,7 @@ assemComponentCProg =
         2
     )
 
-assemComponentProgSpec :: Num a => ProgSpecInit a
+assemComponentProgSpec :: Num a => ProgSpecInit B.ByteString a
 assemComponentProgSpec =
   ProgSpecInit
     [0, 0]
@@ -67,10 +68,10 @@ assemComponentProgSpec =
         0
     )
 
-assemComponentProg :: forall a. (Num a) => Prog (SymIntN 5) a
-assemComponentProg = genSymSimple (assemComponentProgSpec :: ProgSpecInit a) "prog"
+assemComponentProg :: forall a. (Num a) => Prog B.ByteString (SymIntN 5) a
+assemComponentProg = genSymSimple (assemComponentProgSpec :: ProgSpecInit B.ByteString a) "prog"
 
-assemComponentProgSpec' :: Num a => ProgSpecInit a
+assemComponentProgSpec' :: Num a => ProgSpecInit B.ByteString a
 assemComponentProgSpec' =
   ProgSpecInit
     [0, 0]
@@ -101,8 +102,8 @@ assemComponentProgSpec' =
         0
     )
 
-assemComponentProg' :: forall a. (Num a) => Prog (SymIntN 5) a
-assemComponentProg' = genSymSimple (assemComponentProgSpec' :: ProgSpecInit a) "prog"
+assemComponentProg' :: forall a. (Num a) => Prog B.ByteString (SymIntN 5) a
+assemComponentProg' = genSymSimple (assemComponentProgSpec' :: ProgSpecInit B.ByteString a) "prog"
 
 restrictedAssemSpec ::
   forall a e.
@@ -129,7 +130,7 @@ componentMain _ = do
   let configb = precise boolector {Grisette.transcript = Just "b.smt2"}
   qcComponent4 (Proxy @SymInteger) 17 8 8 assemAlgo assemComponentCProg
 
-  Right (_, x :: CProg (IntN 5) (IntN 8)) <-
+  Right (_, x :: CProg B.ByteString (IntN 5) (IntN 8)) <-
     timeItAll "cegis" $
       cegisQuickCheckAssert
         configb

@@ -16,8 +16,9 @@ import Grisette
 import Test.QuickCheck
 import Component.AuxProg
 import Component.CEGISAux
+import qualified Data.ByteString as B
 
-assemComponentCProg :: Num a => CProg Integer a
+assemComponentCProg :: Num a => CProg B.ByteString Integer a
 assemComponentCProg =
   CProg
     (CAuxProg[0, 0]
@@ -40,7 +41,7 @@ assemComponentCProg =
         2
     )
 
-assemComponentProgAuxSpec :: Num a => AuxSpecInit a
+assemComponentProgAuxSpec :: Num a => AuxSpecInit B.ByteString a
 assemComponentProgAuxSpec =
   AuxSpecInit
     [0, 0]
@@ -64,8 +65,8 @@ assemComponentProgAuxSpec =
         2
     ]
 
-assemComponentProg :: forall a. (Num a) => AuxProg (SymIntN 5) a
-assemComponentProg = genSymSimple (assemComponentProgAuxSpec :: AuxSpecInit a) "prog"
+assemComponentProg :: forall a. (Num a) => AuxProg B.ByteString (SymIntN 5) a
+assemComponentProg = genSymSimple (assemComponentProgAuxSpec :: AuxSpecInit B.ByteString a) "prog"
 
 {-
 assemComponentProgSpec' :: Num a => ProgSpecInit a
@@ -130,7 +131,7 @@ componentAuxMain _ = do
   putStrLn "MAS Component"
   let configb = precise boolector {Grisette.transcript = Just "b.smt2"}
 
-  Right (_, x :: CAuxProg (IntN 5) (IntN 8)) <-
+  Right (_, x :: CAuxProg B.ByteString (IntN 5) (IntN 8)) <-
     timeItAll "cegis" $
       cegisAuxQuickCheck
         configb
