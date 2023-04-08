@@ -9,6 +9,9 @@ cradle:
     - path: "./2ndMin/Component.hs"
       component: "first-order-dpsynth:exe:2ndmin"
 
+    - path: "./2ndMin/ComponentAux.hs"
+      component: "first-order-dpsynth:exe:2ndmin"
+
     - path: "./2ndMin/RYOOPSLA.hs"
       component: "first-order-dpsynth:exe:2ndmin"
 
@@ -94,6 +97,9 @@ cradle:
       component: "first-order-dpsynth:exe:mss"
 
     - path: "./mss/Component.hs"
+      component: "first-order-dpsynth:exe:mss"
+
+    - path: "./mss/ComponentAux.hs"
       component: "first-order-dpsynth:exe:mss"
 
     - path: "./mss/MSSSpec.hs"

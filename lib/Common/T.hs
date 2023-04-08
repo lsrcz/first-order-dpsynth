@@ -8,7 +8,7 @@ import Data.Hashable
 data CT ci
   = CBool Bool
   | CInt ci
-  deriving (Show, Generic, Eq, Ord)
+  deriving (Show, Read, Generic, Eq, Ord)
   deriving (ToCon (T si)) via (Default (CT ci))
 
 data T si

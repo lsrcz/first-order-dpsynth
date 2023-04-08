@@ -10,7 +10,6 @@ import Data.List
 import GHC.Generics
 import GHC.TypeLits
 import Grisette
-import Debug.Trace
 
 data Node val
   = Node B.ByteString val [val]
@@ -329,3 +328,39 @@ interpretMiniProg inputs prog fm intermediateGen = do
     go [] [] _ = throwError AssertionViolation
     go [] ((xo, xr) : xs) v = mrgIf (eqVal xr v) (mrgReturn xo) (go [] xs v)
     go i o v = foldr (\(val, idx) acc -> mrgIf (eqVal (inputVal idx) v) (mrgReturn val) acc) (go [] o v) (zip i [0..])
+
+assertMiniProgResult ::
+  forall val a m.
+  ( ValLike val,
+    UnionLike m,
+    MonadError VerificationConditions m,
+    MonadFresh m,
+    MonadWriter IntermediateVarSet m,
+    ExtractSymbolics a,
+    SEq a,
+    Mergeable a,
+    Show a
+  ) =>
+  [a] ->
+  a ->
+  MiniProg val ->
+  FuncMap a ->
+  m a ->
+  m ()
+assertMiniProgResult inputs result prog fm intermediateGen = do
+  enhanced <- genEnhancedMiniProg inputs prog intermediateGen
+  connected enhanced
+  semanticsCorrect fm enhanced
+  let outputs = getOutputs enhanced
+  go inputs outputs (enhancedOutput enhanced)
+  where
+    getOutputs (EnhancedMiniProg enodes _) =
+      ( \case
+          EnhancedNode _ (vo, vr) _ -> [(vo, vr)]
+          _ -> []
+      )
+        =<< enodes
+    go :: [a] -> [(a, val)] -> val -> m ()
+    go [] [] _ = throwError AssertionViolation
+    go [] ((xo, xr) : xs) v = mrgIf (eqVal xr v) (symAssert $ xo ==~ result) (go [] xs v)
+    go i o v = foldr (\(val, idx) acc -> mrgIf (eqVal (inputVal idx) v) (symAssert $ val ==~ result) acc) (go [] o v) (zip i [0..])

@@ -17,7 +17,7 @@ import MASSpec
 masComponentCProg :: Num a => CProg Integer a
 masComponentCProg =
   CProg
-    [0, 0, 0]
+    (CAuxProg [0, 0, 0]
     [ CMiniProg
         [ CNode "+" 4 [0, 2],
           CNode "max" 5 [0, 4]
@@ -34,7 +34,7 @@ masComponentCProg =
           CNode "max" 5 [3, 4]
         ]
         5
-    ]
+    ])
     ( CMiniProg
         [ CNode "max" 3 [0, 1],
           CNode "max" 4 [2, 3]

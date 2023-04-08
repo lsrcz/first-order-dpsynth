@@ -1,19 +1,17 @@
-module Component where
+module ComponentAux where
 
 import Common.Spec
 import Common.Timing
-import Component.CEGIS
 import Component.ConcreteMiniProg
 import Component.ConcreteProg
 import Component.MiniProg
 import Component.Ops
-import Component.Prog
-import Component.QuickCheck
 import Control.Monad.Except
-import Data.Proxy
 import Grisette
 import MSSSpec
 import Test.QuickCheck
+import Component.AuxProg
+import Component.CEGISAux (cegisAuxQuickCheck, DistinguishingInputs (DistinguishingInputs))
 
 mssComponentCProg :: Num a => CProg Integer a
 mssComponentCProg =
@@ -34,28 +32,25 @@ mssComponentCProg =
         2
     )
 
-mssComponentCProg' :: Num a => CProg Integer a
-mssComponentCProg' =
-  CProg
-    (CAuxProg[0, 0]
-    [ CMiniProg
-        [ CNode "zero" 3 [0],
-          CNode "+" 4 [0, 1],
-          CNode "max" 5 [3, 4]
+mssComponentCAuxProg :: forall a. (Num a) => AuxProg (SymIntN 5) a
+mssComponentCAuxProg = AuxProg[0, 0]
+    [ MiniProg
+        [ Node "zero" 3 [0],
+          Node "max" 4 [1, 3],
+          Node "+" 5 [0, 4]
         ]
-        5,
-      CMiniProg
-        [CNode "max" 3 [1, 2]]
+        5
+        (5,5),
+      MiniProg
+        [Node "max" 3 [1, 2]]
         3
-    ])
-    ( CMiniProg
-        [CNode "max" 2 [0, 1]]
-        2
-    )
+        (3,3)
+    ]
 
-mssComponentProgSpec :: Num a => ProgSpecInit a
-mssComponentProgSpec =
-  ProgSpecInit
+
+mssComponentAuxProgSpec :: Num a => AuxSpecInit a
+mssComponentAuxProgSpec =
+  AuxSpecInit
     [0, 0]
     [ MiniProgSpec
         [ ComponentSpec "zero" 1,
@@ -70,8 +65,8 @@ mssComponentProgSpec =
         3
         0
     ]
-    (MiniProgSpec [ComponentSpec "max" 2] 2 0)
 
+{-
 mssComponentProgSpec' :: Num a => ProgSpecInit a
 mssComponentProgSpec' =
   ProgSpecInit
@@ -96,12 +91,15 @@ mssComponentProgSpec' =
         0
     ]
     (MiniProgSpec [ComponentSpec "max" 2] 2 0)
+    -}
 
-mssComponentProg :: forall a. (Num a) => Prog (SymIntN 5) a
-mssComponentProg = genSymSimple (mssComponentProgSpec :: ProgSpecInit a) "prog"
+mssComponentProg :: forall a. (Num a) => AuxProg (SymIntN 5) a
+mssComponentProg = genSymSimple (mssComponentAuxProgSpec :: AuxSpecInit a) "prog"
 
+{-
 mssComponentProg' :: forall a. (Num a) => Prog (SymIntN 5) a
 mssComponentProg' = genSymSimple (mssComponentProgSpec' :: ProgSpecInit a) "prog"
+-}
 
 restrictedMssSpec ::
   forall a e.
@@ -112,22 +110,35 @@ restrictedMssSpec l = do
   mrgTraverse_ (\x -> symAssume $ x >=~ -8 &&~ x <=~ 8) $ join l
   spec apply allBitStrings l
 
-componentMain :: String -> IO ()
-componentMain _ = do
+mssAuxInputsGen :: Enum s => (s, s) -> Gen (DistinguishingInputs s)
+mssAuxInputsGen e = do
+  n <- getSize
+  i1 <- vectorOf 1 (vectorOf n $ chooseEnum e)
+  i2 <- vectorOf 1 (vectorOf n $ chooseEnum e)
+  v <- vectorOf 1 $ chooseEnum e
+  return $ DistinguishingInputs i1 i2 v
+
+componentAuxMain :: String -> IO ()
+componentAuxMain _ = do
   putStrLn "MSS Component"
   let configb = precise boolector {Grisette.transcript = Just "b.smt2"}
+  {-
   quickCheck
     ( \(l :: [Integer]) ->
-        (interpretCProg [toSym l] (mssComponentCProg' @SymInteger) funcMap :: ExceptT VerificationConditions UnionM SymInteger)
+        (interpretCProg [toSym l] (mssComponentCProg @SymInteger) funcMap :: ExceptT VerificationConditions UnionM SymInteger)
           == mrgReturn (toSym $ mssAlgo l :: SymInteger)
     )
+    -}
 
-  Right (_, x :: CProg (IntN 5) (IntN 8)) <- timeItAll "cegis" $ cegisCustomized configb restrictedMssSpec [[[]], [["a" :: SymIntN 8]], [["a", "b"]], [["a", "b", "c"]], [["a", "b", "c", "d"]]] mssComponentProg funcMap (simpleFresh ())
+  Right (_, x :: CAuxProg (IntN 5) (IntN 8)) <- timeItAll "cegis" $
+    cegisAuxQuickCheck configb restrictedMssSpec 1 (mssAuxInputsGen (-8, 8)) 4 (mssComponentProg @(SymIntN 8)) funcMap (simpleFresh ())
   print x
 
+{-
   qcComponent (Proxy @(SymIntN 8)) 17 8 8 mssAlgo x
 
   Right (_, x :: CProg (IntN 5) (IntN 8)) <- timeItAll "cegis" $ cegisCustomized configb restrictedMssSpec [[[]], [["a" :: SymIntN 8]], [["a", "b"]], [["a", "b", "c"]], [["a", "b", "c", "d"]]] mssComponentProg' funcMap (simpleFresh ())
   print x
 
   qcComponent (Proxy @(SymIntN 8)) 17 8 8 mssAlgo x
+-}

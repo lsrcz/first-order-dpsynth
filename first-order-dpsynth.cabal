@@ -37,7 +37,9 @@ library
       Common.T
       Common.Timing
       Common.Val
+      Component.AuxProg
       Component.CEGIS
+      Component.CEGISAux
       Component.ConcreteMiniProg
       Component.ConcreteProg
       Component.IntermediateVarSet
@@ -111,6 +113,7 @@ executable 2ndmin
   main-is: Main.hs
   other-modules:
       Component
+      ComponentAux
       RYOOPSLA
       SecondMinSpec
       Paths_first_order_dpsynth
@@ -235,6 +238,7 @@ executable assem
   other-modules:
       ASSEMSpec
       Component
+      ComponentAux
       OOPSLA
       Paths_first_order_dpsynth
   hs-source-dirs:
@@ -604,6 +608,7 @@ executable mss
   main-is: Main.hs
   other-modules:
       Component
+      ComponentAux
       MSSSpec
       OOPSLA
       Paths_first_order_dpsynth

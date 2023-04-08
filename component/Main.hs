@@ -1,5 +1,6 @@
 module Main where
 
+{-
 import Common.Val
 import Component.CEGIS
 import Component.ConcreteMiniProg
@@ -7,7 +8,6 @@ import Component.MiniProg
 import Data.Maybe
 import Grisette
 
-{-
 progSpec1 :: MiniProgSpec
 progSpec1 =
   MiniProgSpec

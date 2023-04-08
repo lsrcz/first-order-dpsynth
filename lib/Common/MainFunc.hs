@@ -1,7 +1,6 @@
 {-# LANGUAGE DeriveDataTypeable #-}
 module Common.MainFunc where
 
-import System.Environment
 import Data.Data
 import System.Console.CmdArgs
 

@@ -20,7 +20,7 @@ import Test.QuickCheck
 mmmComponentCProg :: Num a => CProg CVal a
 mmmComponentCProg =
   CProg
-    [0, 0, 0]
+    (CAuxProg [0, 0, 0]
     [ CMiniProg
         [ CNode "max" (CInternal 0) [CInput 2, CInput 3]
         ]
@@ -37,7 +37,7 @@ mmmComponentCProg =
           CNode "max" (CInternal 2) [CInternal 0, CInternal 1]
         ]
         (CInternal 2)
-    ]
+    ])
     ( CMiniProg
         [ CNode "max" (CInternal 0) [CInput 0, CInput 1],
           CNode "max" (CInternal 1) [CInput 2, CInternal 0]
@@ -48,7 +48,7 @@ mmmComponentCProg =
 mmmComponentCProg' :: Num a => CProg Integer a
 mmmComponentCProg' =
   CProg
-    [0, 0, 0]
+    (CAuxProg [0, 0, 0]
     [ CMiniProg
         [ CNode "max" 4 [2, 3]
         ]
@@ -65,7 +65,7 @@ mmmComponentCProg' =
           CNode "max" 6 [5, 4]
         ]
         6
-    ]
+    ])
     ( CMiniProg
         [ CNode "max" 3 [0, 2],
           CNode "max" 4 [1, 3]
@@ -115,11 +115,33 @@ restrictedMmmSpec l = do
   mrgTraverse_ (\x -> symAssume $ x >=~ -8 &&~ x <=~ 8) $ join l
   spec apply allBitStrings l
 
+mmmInputsGen :: Enum s => (s, s) -> Gen [[s]]
+mmmInputsGen e = do
+  n <- getSize
+  vectorOf 1 (vectorOf n $ chooseEnum e)
+
 componentMain :: String -> IO ()
 componentMain _ = do
   let config = precise z3 {Grisette.transcript = Just "a.smt2"}
 
   let configb = precise boolector {Grisette.transcript = Just "b.smt2"}
+
+  Right (_, x :: CProg (IntN 5) (IntN 8)) <-
+    timeItAll "cegis" $
+      cegisQuickCheckAssert
+        configb
+        (restrictedMmmSpec @(SymIntN 8))
+        1
+        (mmmInputsGen (-8, 8))
+        4
+        mmmComponentProg1''
+        funcMap
+        (simpleFresh ())
+  print x
+
+  qcComponent (Proxy @(SymIntN 8)) 17 8 8 mmmAlgo x
+
+
 
   Right (_, x :: CProg (IntN 5) (IntN 8)) <- timeItAll "cegis" $ cegisCustomized configb restrictedMmmSpec [[[]], [[-1]], [[1]], [[-1, 1]], [[1,1]], [[7]], [[1,-6]], [[7,2]], [[1,-6,2]], [[2,0,2]], [[2,0,2,1]], [[-3,1]], [[-3,1,1]], [["a" :: SymIntN 8]], [["a", "b"]], [["a", "b", "c"]], [["a", "b", "c", "d"]]] mmmComponentProg1'' funcMap (simpleFresh ())
   print x

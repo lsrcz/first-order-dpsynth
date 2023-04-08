@@ -93,36 +93,38 @@ safeMisSpecV = safeSpecV safeApply allBitStrings
 misComponentCProg :: Num a => CProg CVal a
 misComponentCProg =
   CProg
-    [0, 0]
+    (CAuxProg[0, 0]
     [ CMiniProg [CNode "+" (CInternal 0) [CInput 0, CInput 2]] (CInternal 0),
       CMiniProg [CNode "max" (CInternal 0) [CInput 1, CInput 2]] (CInternal 0)
-    ]
+    ])
     (CMiniProg [CNode "max" (CInternal 0) [CInput 0, CInput 1]] (CInternal 0))
 
-misComponentProgSpec :: ProgSpec
+misComponentProgSpec :: Num a => ProgSpecInit a
 misComponentProgSpec =
-  ProgSpec
+  ProgSpecInit
+    [0, 0]
     [ MiniProgSpec [ComponentSpec "+" 2] 3 0,
       MiniProgSpec [ComponentSpec "max" 2] 3 0
     ]
     (MiniProgSpec [ComponentSpec "max" 2] 2 0)
 
-misComponentProg :: (GenSymSimple () a, Num a) => Prog SymInteger a
-misComponentProg = genSymSimple ((), misComponentProgSpec) "prog"
+misComponentProg :: forall a. (Num a) => Prog SymInteger a
+misComponentProg = genSymSimple (misComponentProgSpec @a) "prog"
 
-misComponentProgSpec1 :: ProgSpec
+misComponentProgSpec1 :: Num a => ProgSpecInit a
 misComponentProgSpec1 =
-  ProgSpec
+  ProgSpecInit
+    [0, 0]
     [ MiniProgSpec [ComponentSpec "+" 2, ComponentSpec "+" 2] 3 1,
       MiniProgSpec [ComponentSpec "max" 2, ComponentSpec "max" 2] 3 1
     ]
     (MiniProgSpec [ComponentSpec "max" 2] 2 0)
 
-misComponentProg1 :: (GenSymSimple () a, Num a) => Prog SymInteger a
-misComponentProg1 = genSymSimple ((), misComponentProgSpec1) "prog"
+misComponentProg1 :: forall a. (Num a) => Prog SymInteger a
+misComponentProg1 = genSymSimple (misComponentProgSpec1 @a) "prog"
 
-misComponentProg2 :: (GenSymSimple () a, Num a) => Prog (SymIntN 5) a
-misComponentProg2 = genSymSimple ((), misComponentProgSpec1) "prog"
+misComponentProg2 :: forall a. (Num a) => Prog (SymIntN 5) a
+misComponentProg2 = genSymSimple (misComponentProgSpec1 @a) "prog"
 
 {-
 misComponentProg :: Num a => Prog a

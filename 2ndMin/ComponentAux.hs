@@ -1,4 +1,4 @@
-module Component where
+module ComponentAux where
 import Component.ConcreteProg
 import Component.ConcreteMiniProg
 import Common.T
@@ -70,7 +70,7 @@ secondMinComponentProgSpec' =
        --ComponentSpec "min" 2,
        ComponentSpec "min" 2]
       3
-      0,
+      3,
       MiniProgSpec
       [ComponentSpec "max" 2,
        --ComponentSpec "max" 2,
@@ -79,7 +79,7 @@ secondMinComponentProgSpec' =
        --ComponentSpec "min" 2,
        ComponentSpec "min" 2]
       3
-      1
+      3
       ]
     ( MiniProgSpec
       [ComponentSpec "max" 2,
@@ -89,7 +89,7 @@ secondMinComponentProgSpec' =
        --ComponentSpec "min" 2,
        ComponentSpec "min" 2]
       3
-      0)
+      3)
 
 secondMinComponentProg :: forall a. (Num a, Mergeable a) => Prog (SymIntN 5) (MT a)
 secondMinComponentProg = genSymSimple (secondMinComponentProgSpec :: ProgSpecInit (MT a)) "prog"
@@ -99,15 +99,14 @@ secondMinInputsGen e = do
   n <- getSize
   vectorOf 1 (vectorOf n $ CInt <$> chooseEnum e)
 
-componentMain :: String -> IO ()
-componentMain _ = do
+componentAuxMain :: String -> IO ()
+componentAuxMain _ = do
   -- qcTComponent (Proxy @SymInteger) 17 16 2 4 secondMin secondMinComponentCProg 
 
   let configb = precise boolector {Grisette.transcript = Just "b.smt2"}
   Right (_, x :: CProg (IntN 5) (CT (IntN 8))) <-
     timeItAll "cegis" $
-      cegisQuickCheck
-        interpretProg
+      cegisQuickCheckAssert
         configb
         (spec2Spec' @(SymIntN 8) minSpec)
         1
