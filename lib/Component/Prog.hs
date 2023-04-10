@@ -68,7 +68,9 @@ interpretProg ::
     ExtractSymbolics a,
     SEq a,
     Mergeable a,
-    FuncMapLike op a fm
+    FuncMapLike op a fm,
+    Show op,
+    Show val
   ) =>
   [[a]] ->
   Prog op val a ->
@@ -143,7 +145,7 @@ connectedL e@(EnhancedMiniProgL enodes) = trace (show enodes) $ trace (show outp
       )
         =<< enodes
 
-semanticsCorrectL :: (MonadUnion m, Show a, Show val, MonadError VerificationConditions m, SEq a, Mergeable a, FuncMapLike op a fm) =>
+semanticsCorrectL :: (MonadUnion m, Show a, Show val, MonadError VerificationConditions m, SEq a, Mergeable a, MonadFresh m, FuncMapLike op a fm) =>
   fm -> EnhancedMiniProgL op val a -> m ()
 semanticsCorrectL fm (EnhancedMiniProgL enodes) = go enodes
   where

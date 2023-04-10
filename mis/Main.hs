@@ -24,6 +24,7 @@ import Test.QuickCheck
 import Bytecode.Query
 import Bytecode.Ops
 import qualified Data.ByteString as B
+import Component.QuickCheck
 
 mis :: (Num a) => ConProgram a
 mis =
@@ -199,19 +200,11 @@ main = do
 
   Right (_, x :: CProg B.ByteString Integer Integer) <- timeItAll "cegis" $ cegisCustomized (precise z3) misSpec [[[]], [[a]], [[a, b]], [[a, b, c]], [[a, b, c, d]]] misComponentProg1 funcMap gen
 
-  quickCheck
-    ( \(l :: [Integer]) ->
-        (interpretCProg [toSym l] x funcMap :: ExceptT VerificationConditions UnionM SymInteger)
-          == mrgReturn (toSym $ misAlgo l :: SymInteger)
-    )
+  qcComponent 17 8 8 misAlgo x
 
   Right (_, x :: CProg B.ByteString Integer Integer) <- timeItAll "cegis" $ cegisCustomized' (precise z3) misSpec [input] misComponentProg1 funcMap gen
 
-  quickCheck
-    ( \(l :: [Integer]) ->
-        (interpretCProg [toSym l] x funcMap :: ExceptT VerificationConditions UnionM SymInteger)
-          == mrgReturn (toSym $ misAlgo l :: SymInteger)
-    )
+  qcComponent 17 8 8 misAlgo x
 
   {-
     print (misComponentProg :: Prog SymInteger)

@@ -11,7 +11,6 @@ import Component.Prog
 import Component.QuickCheck (qcComponent4)
 import Control.Monad.Except
 import Data.List
-import Data.Proxy
 import Grisette
 import Test.QuickCheck
 import qualified Data.ByteString as B
@@ -84,7 +83,7 @@ assemComponentProgSpec' =
           ComponentSpec "max" 2
         ]
         6
-        4,
+        2,
       MiniProgSpec
         [ ComponentSpec "+" 2,
           ComponentSpec "+" 2,
@@ -94,7 +93,7 @@ assemComponentProgSpec' =
           ComponentSpec "max" 2
         ]
         6
-        4
+        2
     ]
     ( MiniProgSpec
         [ComponentSpec "min" 2]
@@ -128,7 +127,7 @@ componentMain :: String -> IO ()
 componentMain _ = do
   putStrLn "MAS Component"
   let configb = precise boolector {Grisette.transcript = Just "b.smt2"}
-  qcComponent4 (Proxy @SymInteger) 17 8 8 assemAlgo assemComponentCProg
+  qcComponent4 17 8 8 assemAlgo assemComponentCProg
 
   Right (_, x :: CProg B.ByteString (IntN 5) (IntN 8)) <-
     timeItAll "cegis" $
@@ -140,10 +139,11 @@ componentMain _ = do
         4
         assemComponentProg'
         funcMap
+        cfuncMap
         (simpleFresh ())
   print x
 
-  qcComponent4 (Proxy @(SymIntN 8)) 17 8 8 assemAlgo x
+  qcComponent4 17 8 8 assemAlgo x
 
 {-
 

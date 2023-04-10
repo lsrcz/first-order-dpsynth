@@ -42,9 +42,12 @@ library
       Component.AuxProg
       Component.CEGIS
       Component.CEGISAux
+      Component.CEGISListAux
       Component.ConcreteMiniProg
       Component.ConcreteProg
       Component.IntermediateVarSet
+      Component.ListAuxProg
+      Component.ListOps
       Component.MiniProg
       Component.Ops
       Component.Prog
@@ -611,6 +614,7 @@ executable mss
   other-modules:
       Component
       ComponentAux
+      ComponentListAux
       MSSSpec
       OOPSLA
       Paths_first_order_dpsynth

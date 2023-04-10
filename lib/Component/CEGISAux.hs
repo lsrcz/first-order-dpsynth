@@ -1,38 +1,60 @@
 module Component.CEGISAux where
+
+import Common.FuncMap
+import Common.Timing
 import Common.Val
-import Grisette
-import Control.Monad.Except
-import Test.QuickCheck
 import Component.AuxProg
-import Component.CEGIS (sbvCheckSatResult, M)
+import Component.CEGIS (M, sbvCheckSatResult)
 import Component.ConcreteProg
+import Component.IntermediateVarSet
+import Control.Monad.Except
+import Control.Monad.Writer
+import Data.Bifunctor
+import Data.Maybe
 import qualified Data.SBV as SBV
 import qualified Data.SBV.Control as SBVC
-import Grisette.Backend.SBV.Data.SMT.Lowering
-import Common.Timing
-import Component.IntermediateVarSet
-import Data.Bifunctor
-import Control.Monad.Writer
-import Data.Maybe
-import GHC.Generics
 import Debug.Trace
-import Common.FuncMap
+import GHC.Generics
+import Grisette
+import Grisette.Backend.SBV.Data.SMT.Lowering
+import Test.QuickCheck
 
-data DistinguishingInputs c =
-  DistinguishingInputs [[c]] [[c]] [c]
+data DistinguishingInputs c
+  = DistinguishingInputs [[c]] [[c]] [c]
   deriving (Generic, Show, Read)
   deriving (ToCon (DistinguishingInputs s)) via Default (DistinguishingInputs c)
 
-deriving via Default (DistinguishingInputs s)
-  instance ToSym c s => ToSym (DistinguishingInputs c) (DistinguishingInputs s)
+deriving via
+  Default (DistinguishingInputs s)
+  instance
+    ToSym c s => ToSym (DistinguishingInputs c) (DistinguishingInputs s)
 
 cegisAuxQuickCheck ::
-  forall n cval val a c op fm g.
-  (ValLike val, Show cval, CValLike cval, ToCon a c, Show c, ToSym c a, Eq c,
-  EvaluateSym val, ToCon val cval, ExtractSymbolics a, EvaluateSym a, Mergeable a, SEq a, Show a, ToSym a a, ToCon a a, Read c,
-  FuncMapLike op a fm,
-  OpCode op g) =>
-
+  forall n cval val a c op cop fm cfm g.
+  ( ValLike val,
+    Show cval,
+    CValLike cval,
+    ToCon a c,
+    Show c,
+    ToSym c a,
+    Eq c,
+    EvaluateSym val,
+    ToCon val cval,
+    ExtractSymbolics a,
+    EvaluateSym a,
+    Mergeable a,
+    SEq a,
+    Show a,
+    ToSym a a,
+    ToCon a a,
+    Read c,
+    FuncMapLike op a fm,
+    CFuncMapLike cop c cfm,
+    ToCon op cop,
+    Show cop,
+    OpCode op g,
+    Show val
+  ) =>
   GrisetteSMTConfig n ->
   ([[a]] -> ExceptT VerificationConditions UnionM a) ->
   Int ->
@@ -40,9 +62,10 @@ cegisAuxQuickCheck ::
   Int ->
   AuxProg op val a ->
   fm ->
+  cfm ->
   M a ->
-  IO (Either SolvingFailure ([DistinguishingInputs a], CAuxProg op cval c))
-cegisAuxQuickCheck config spec numInputs inputGen maxGenSize prog funcMap gen = SBV.runSMTWith (sbvConfig config) {transcript = Just "guess.smt2"} $ do
+  IO (Either SolvingFailure ([DistinguishingInputs a], CAuxProg cop cval c))
+cegisAuxQuickCheck config spec numInputs inputGen maxGenSize prog funcMap cfuncMap gen = SBV.runSMTWith (sbvConfig config) {transcript = Just "guess.smt2"} $ do
   let SymBool t = wellFormed
   (newm, a) <- lowerSinglePrim config t
   SBVC.query $
@@ -82,52 +105,52 @@ cegisAuxQuickCheck config spec numInputs inputGen maxGenSize prog funcMap gen = 
     check :: Int -> Model -> IO (Either SolvingFailure (DistinguishingInputs c, Int))
     check i _ | i > maxGenSize = return (Left Unsat)
     check i candidate = do
-      let evaluated :: CAuxProg op cval a = evaluateSymToCon candidate prog
+      let evaluated :: CAuxProg cop cval c = evaluateSymToCon candidate prog
       liftIO $ print evaluated
       r <-
         quickCheckWithResult
           (stdArgs {maxSize = i, maxSuccess = 1000, chatty = False})
           ( forAll (resize i inputGen) $ \(DistinguishingInputs i1 i2 v) ->
-              let 
-                i1v = zipWith (\l r -> l ++ [r]) i1 v
-                i2v = zipWith (\l r -> l ++ [r]) i2 v
-                p1 = interpretCAuxProg (toSym i1) evaluated funcMap :: ExceptT VerificationConditions UnionM [a]
-                sp1 = spec (toSym i1v)
-                p2 = interpretCAuxProg (toSym i2) evaluated funcMap :: ExceptT VerificationConditions UnionM [a]
-                sp2 = spec (toSym i2v)
+              let i1v = zipWith (\l r -> l ++ [r]) i1 v
+                  i2v = zipWith (\l r -> l ++ [r]) i2 v
+                  p1 = interpretCAuxProgOnConInputs i1 evaluated cfuncMap :: Either VerificationConditions [c]
+                  sp1 = spec (toSym i1v)
+                  p2 = interpretCAuxProgOnConInputs i2 evaluated cfuncMap :: Either VerificationConditions [c]
+                  sp2 = spec (toSym i2v)
                in {-trace "-----" $ trace (show i1v) $ trace (show i2v) $
-                 trace (show v) $ trace (show p1) $
-                 trace (show sp1) $ trace (show p2) $
-                 trace (show sp2) $-}
-                 case (p1, sp1, p2, sp2) of
-                    (ExceptT (SingleU (Right v1)), ExceptT (SingleU (Right sv1)),
-                     ExceptT (SingleU (Right v2)), ExceptT (SingleU (Right sv2))) ->
-                      let
-                        cv1 = fromJust $ toCon v1 :: [c]
-                        cv2 = fromJust $ toCon v2 :: [c]
-                        csv1 = fromJust $ toCon sv1 :: c
-                        csv2 = fromJust $ toCon sv2 :: c
-                       in
-                        csv1 == csv2 || cv1 /= cv2
+                  trace (show v) $ trace (show p1) $
+                  trace (show sp1) $ trace (show p2) $
+                  trace (show sp2) $-}
+                  case (p1, sp1, p2, sp2) of
+                    ( Right v1,
+                      ExceptT (SingleU (Right sv1)),
+                      Right v2,
+                      ExceptT (SingleU (Right sv2))
+                      ) ->
+                        let cv1 = v1 :: [c]
+                            cv2 = v2 :: [c]
+                            csv1 = fromJust $ toCon sv1 :: c
+                            csv2 = fromJust $ toCon sv2 :: c
+                         in csv1 == csv2 || cv1 /= cv2
                     _ -> error "Bad"
           )
       case r of
         Success {} -> check (i + 1) candidate
         Failure _ _ _ _ _ _ _ _ _ _ cex _ _ -> do
-          let input :: DistinguishingInputs c = read (head cex) --unGen inputGen curSeed i
+          let input :: DistinguishingInputs c = read (head cex) -- unGen inputGen curSeed i
           {-liftIO $ print input
           liftIO $ print i
           liftIO $ print r-}
           return $ Right (input, i)
-          {-
-          case spec input of
-            ExceptT (SingleU (Right v)) -> return $ Right (input, i, v)
-            ExceptT (SingleU (Left AssumptionViolation)) -> check (i + 1) candidate
-            -}
-
-{-
-          return $ Right (input, i, ; _ -> error "Bad")
+        {-
+        case spec input of
+          ExceptT (SingleU (Right v)) -> return $ Right (input, i, v)
+          ExceptT (SingleU (Left AssumptionViolation)) -> check (i + 1) candidate
           -}
+
+        {-
+                  return $ Right (input, i, ; _ -> error "Bad")
+                  -}
         _ -> error "???"
 
     guess :: Int -> DistinguishingInputs c -> SymBiMap -> SBVC.Query (SymBiMap, Either SolvingFailure Model)
@@ -142,8 +165,8 @@ cegisAuxQuickCheck config spec numInputs inputGen maxGenSize prog funcMap gen = 
           md <- SBVC.getModel
           let model = parseModel config md newm
           let ep = evaluateSymToCon model prog :: CAuxProg op cval c
-          let r1 = interpretCAuxProg (toSym i1) ep funcMap :: ExceptT VerificationConditions UnionM [a]
-          let r2 = interpretCAuxProg (toSym i2) ep funcMap :: ExceptT VerificationConditions UnionM [a]
+          let r1 = runFreshT (interpretCAuxProgOnSymInputs (toSym i1) ep funcMap) $$(nameWithLoc "r1") :: ExceptT VerificationConditions UnionM [a]
+          let r2 = runFreshT (interpretCAuxProgOnSymInputs (toSym i2) ep funcMap) $$(nameWithLoc "r2") :: ExceptT VerificationConditions UnionM [a]
           liftIO $ print ep
           liftIO $ print i1
           liftIO $ print i2
@@ -151,7 +174,7 @@ cegisAuxQuickCheck config spec numInputs inputGen maxGenSize prog funcMap gen = 
           liftIO $ print r2
           return (newm, Right model)
         _ -> return (newm, Left $ sbvCheckSatResult r)
-    
+
     loop ::
       Int ->
       Either SolvingFailure Model ->
@@ -159,7 +182,7 @@ cegisAuxQuickCheck config spec numInputs inputGen maxGenSize prog funcMap gen = 
       -- [[[a]]] ->
       [DistinguishingInputs a] ->
       SymBiMap ->
-      SBVC.Query (SymBiMap, Either SolvingFailure ([DistinguishingInputs a], CAuxProg op cval c))
+      SBVC.Query (SymBiMap, Either SolvingFailure ([DistinguishingInputs a], CAuxProg cop cval c))
     loop idx (Right mo) curSize cexs origm = do
       r <- liftIO $ timeItAll "CHECK" $ check curSize mo
       case r of
@@ -169,4 +192,3 @@ cegisAuxQuickCheck config spec numInputs inputGen maxGenSize prog funcMap gen = 
           (newm, res) <- timeItAll "GUESS" $ guess idx cex origm
           loop (idx + 1) res nextSize (toSym cex : cexs) newm
     loop _ (Left v) _ _ origm = return (origm, Left v)
-

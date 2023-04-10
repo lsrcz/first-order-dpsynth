@@ -4,7 +4,6 @@ import Component.ConcreteMiniProg
 import Common.T
 import Component.QuickCheck (qcTComponent)
 import Grisette
-import Data.Proxy
 import SecondMinSpec
 import Component.AuxProg
 import Component.Prog
@@ -115,8 +114,9 @@ componentAuxMain _ = do
         4
         secondMinComponentProg
         mtfuncMap
+        mtcfuncMap
         (simpleFresh ())
   print x
 
-  qcTComponent (Proxy @(SymIntN 8)) 17 16 2 4 secondMin x
+  qcTComponent 17 16 2 4 secondMin x
 

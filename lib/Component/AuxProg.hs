@@ -32,7 +32,7 @@ instance (KnownNat n, 1 <= n) => GenSymSimple (AuxSpecInit op a) (AuxProg op (Sy
 
 instance GenSymSimple (AuxSpecInit op a) (AuxProg op (UnionM Val) a) where
   simpleFresh (AuxSpecInit i m) = do
-    miniprogs :: [MiniProg op val] <- traverse simpleFresh m
+    miniprogs :: [MiniProg op (UnionM Val)] <- traverse simpleFresh m
     return $ AuxProg i miniprogs
 
 auxProgWellFormedConstraints ::
@@ -61,7 +61,7 @@ interpretAuxProg ::
     ExtractSymbolics a,
     SEq a,
     Mergeable a,
-    FuncMapLike op a fm
+    FuncMapLike op a fm, Show val, Show a, Show op
   ) =>
   [[a]] ->
   AuxProg op val a ->

@@ -137,46 +137,15 @@ componentMain _ = do
         4
         mmmComponentProg1''
         funcMap
+        cfuncMap
         (simpleFresh ())
   print x
 
-  qcComponent (Proxy @(SymIntN 8)) 17 8 8 mmmAlgo x
+  qcComponent 17 8 8 mmmAlgo x
 
 
 
   Right (_, x :: CProg B.ByteString (IntN 5) (IntN 8)) <- timeItAll "cegis" $ cegisCustomized configb restrictedMmmSpec [[[]], [[-1]], [[1]], [[-1, 1]], [[1,1]], [[7]], [[1,-6]], [[7,2]], [[1,-6,2]], [[2,0,2]], [[2,0,2,1]], [[-3,1]], [[-3,1,1]], [["a" :: SymIntN 8]], [["a", "b"]], [["a", "b", "c"]], [["a", "b", "c", "d"]]] mmmComponentProg1'' funcMap (simpleFresh ())
   print x
 
-  qcComponent (Proxy @(SymIntN 8)) 17 8 8 mmmAlgo x
-
-  Right (_, x :: CProg B.ByteString Integer Integer) <- cegisCustomized config mmmSpec [[[]], [["a" :: SymInteger]], [["a", "b"]], [["a", "b", "c"]], [["a", "b", "c", "d"]]] mmmComponentProg1' funcMap (simpleFresh ())
-
-  print x
-  quickCheck
-    ( \(l :: [Integer]) ->
-        (interpretCProg [toSym l] x funcMap :: ExceptT VerificationConditions UnionM SymInteger)
-          == mrgReturn (toSym $ mmmAlgo l :: SymInteger)
-    )
-
-  Right (_, x :: CProg B.ByteString CVal Integer) <- cegisCustomized config mmmSpec [[[]], [["a" :: SymInteger]], [["a", "b"]], [["a", "b", "c"]], [["a", "b", "c", "d"]]] mmmComponentProg1 funcMap (simpleFresh ())
-
-  print x
-  quickCheck
-    ( \(l :: [Integer]) ->
-        (interpretCProg [toSym l] x funcMap :: ExceptT VerificationConditions UnionM SymInteger)
-          == mrgReturn (toSym $ mmmAlgo l :: SymInteger)
-    )
-
-  Right (_, x :: CProg B.ByteString CVal Integer) <- cegisCustomized' config mmmSpec [["a" :: SymInteger, "b", "c"]] mmmComponentProg1 funcMap (simpleFresh ())
-  print x
-  quickCheck
-    ( \(l :: [Integer]) ->
-        (interpretCProg [toSym l] x funcMap :: ExceptT VerificationConditions UnionM SymInteger)
-          == mrgReturn (toSym $ mmmAlgo l :: SymInteger)
-    )
-
-  quickCheck
-    ( \(l :: [Integer]) ->
-        (interpretCProg [toSym l] (mmmComponentCProg :: CProg B.ByteString CVal Integer) funcMap :: ExceptT VerificationConditions UnionM SymInteger)
-          == mrgReturn (toSym $ mmmAlgo l :: SymInteger)
-    )
+  qcComponent 17 8 8 mmmAlgo x

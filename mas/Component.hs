@@ -91,9 +91,9 @@ componentMain :: String -> IO ()
 componentMain _ = do
   putStrLn "MAS Component"
   let configb = precise boolector {Grisette.transcript = Just "b.smt2"}
-  qcComponent (Proxy @SymInteger) 17 8 8 masAlgo masComponentCProg
+  qcComponent 17 8 8 masAlgo masComponentCProg
 
   Right (_, x :: CProg B.ByteString (IntN 5) (IntN 8)) <- timeItAll "cegis" $ cegisCustomized configb restrictedMasSpec [[[]], [["a" :: SymIntN 8]], [["a", "b"]], [["a", "b", "c"]], [["a", "b", "c", "d"]]] masComponentProg funcMap (simpleFresh ())
   print x
 
-  qcComponent (Proxy @(SymIntN 8)) 17 8 8 masAlgo x
+  qcComponent 17 8 8 masAlgo x

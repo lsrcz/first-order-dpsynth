@@ -2,16 +2,12 @@ module ComponentAux where
 
 import ASSEMSpec
 import Common.Timing
-import Component.CEGIS
 import Component.ConcreteMiniProg
 import Component.ConcreteProg
 import Component.MiniProg
 import Component.Ops
-import Component.Prog
-import Component.QuickCheck (qcComponent4)
 import Control.Monad.Except
 import Data.List
-import Data.Proxy
 import Grisette
 import Test.QuickCheck
 import Component.AuxProg
@@ -141,5 +137,6 @@ componentAuxMain _ = do
         4
         assemComponentProg
         funcMap
+        cfuncMap
         (simpleFresh ())
   print x

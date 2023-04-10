@@ -10,7 +10,6 @@ import OOPSLA.Query
 import Common.T
 import Common.Timing
 import GHC.Stack
-import Debug.Trace
 
 balancedSketchComb :: Program (MT SymInteger)
 balancedSketchComb =

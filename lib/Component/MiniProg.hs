@@ -9,6 +9,7 @@ import Data.List
 import GHC.Generics
 import GHC.TypeLits
 import Grisette
+import Debug.Trace
 
 data Node op val
   = Node op val [val]
@@ -284,19 +285,19 @@ connected (EnhancedMiniProg enodes _) =
       )
         =<< enodes
 
-interpretOp :: (MonadError VerificationConditions m, MonadUnion m,
+interpretOp :: (MonadError VerificationConditions m, MonadUnion m, MonadFresh m,
   Mergeable a, FuncMapLike op a fm) => op -> fm -> [a] -> m a
 interpretOp op fm args = case getFuncMaybe op fm of
   Nothing -> mrgThrowError AssertionViolation
   Just (Func _ _ func) -> func args
 
-semanticsCorrect :: (MonadUnion m, MonadError VerificationConditions m, SEq a,
-  Mergeable a, FuncMapLike op a fm) => fm -> EnhancedMiniProg op val a -> m ()
+semanticsCorrect :: (MonadUnion m, MonadError VerificationConditions m, SEq a, MonadFresh m,
+  Mergeable a, FuncMapLike op a fm, Show val, Show a, Show op) => fm -> EnhancedMiniProg op val a -> m ()
 semanticsCorrect fm (EnhancedMiniProg enodes _) = go enodes
   where
     go [] = mrgReturn ()
     go (InputNode {} : xs) = go xs
-    go (EnhancedNode op (o, _) is : xs) = do
+    go (e@(EnhancedNode op (o, _) is) : xs) = do
       interpretRes <- interpretOp op fm (fst <$> is)
       symAssert (interpretRes ==~ o)
       go xs
@@ -323,7 +324,9 @@ interpretMiniProg ::
     SEq a,
     Mergeable a,
     Show a,
-    FuncMapLike op a fm
+    FuncMapLike op a fm,
+    Show op,
+    Show val
   ) =>
   [a] ->
   MiniProg op val ->
@@ -359,7 +362,9 @@ assertMiniProgResult ::
     SEq a,
     Mergeable a,
     Show a,
-    FuncMapLike op a fm
+    FuncMapLike op a fm,
+    Show val,
+    Show op
   ) =>
   [a] ->
   a ->

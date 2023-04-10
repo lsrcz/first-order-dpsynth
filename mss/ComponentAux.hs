@@ -132,7 +132,7 @@ componentAuxMain _ = do
     -}
 
   Right (_, x :: CAuxProg B.ByteString (IntN 5) (IntN 8)) <- timeItAll "cegis" $
-    cegisAuxQuickCheck configb restrictedMssSpec 1 (mssAuxInputsGen (-8, 8)) 4 (mssComponentProg @(SymIntN 8)) funcMap (simpleFresh ())
+    cegisAuxQuickCheck configb restrictedMssSpec 1 (mssAuxInputsGen (-8, 8)) 4 (mssComponentProg @(SymIntN 8)) funcMap cfuncMap (simpleFresh ())
   print x
 
 {-

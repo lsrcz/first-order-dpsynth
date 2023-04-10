@@ -36,6 +36,9 @@ cradle:
     - path: "./assem/Component.hs"
       component: "first-order-dpsynth:exe:assem"
 
+    - path: "./assem/ComponentAux.hs"
+      component: "first-order-dpsynth:exe:assem"
+
     - path: "./assem/OOPSLA.hs"
       component: "first-order-dpsynth:exe:assem"
 
@@ -100,6 +103,9 @@ cradle:
       component: "first-order-dpsynth:exe:mss"
 
     - path: "./mss/ComponentAux.hs"
+      component: "first-order-dpsynth:exe:mss"
+
+    - path: "./mss/ComponentListAux.hs"
       component: "first-order-dpsynth:exe:mss"
 
     - path: "./mss/MSSSpec.hs"

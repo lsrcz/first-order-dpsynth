@@ -117,18 +117,12 @@ componentMain :: String -> IO ()
 componentMain _ = do
   putStrLn "MSS Component"
   let configb = precise boolector {Grisette.transcript = Just "b.smt2"}
-  quickCheck
-    ( \(l :: [Integer]) ->
-        (interpretCProg [toSym l] (mssComponentCProg' @SymInteger) funcMap :: ExceptT VerificationConditions UnionM SymInteger)
-          == mrgReturn (toSym $ mssAlgo l :: SymInteger)
-    )
-
   Right (_, x :: CProg B.ByteString (IntN 5) (IntN 8)) <- timeItAll "cegis" $ cegisCustomized configb restrictedMssSpec [[[]], [["a" :: SymIntN 8]], [["a", "b"]], [["a", "b", "c"]], [["a", "b", "c", "d"]]] mssComponentProg funcMap (simpleFresh ())
   print x
 
-  qcComponent (Proxy @(SymIntN 8)) 17 8 8 mssAlgo x
+  qcComponent 17 8 8 mssAlgo x
 
   Right (_, x :: CProg B.ByteString (IntN 5) (IntN 8)) <- timeItAll "cegis" $ cegisCustomized configb restrictedMssSpec [[[]], [["a" :: SymIntN 8]], [["a", "b"]], [["a", "b", "c"]], [["a", "b", "c", "d"]]] mssComponentProg' funcMap (simpleFresh ())
   print x
 
-  qcComponent (Proxy @(SymIntN 8)) 17 8 8 mssAlgo x
+  qcComponent 17 8 8 mssAlgo x
