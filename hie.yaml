@@ -57,6 +57,12 @@ cradle:
     - path: "./component/Paths_first_order_dpsynth.hs"
       component: "first-order-dpsynth:exe:component"
 
+    - path: "./evencount/Main.hs"
+      component: "first-order-dpsynth:exe:evencount"
+
+    - path: "./evencount/Paths_first_order_dpsynth.hs"
+      component: "first-order-dpsynth:exe:evencount"
+
     - path: "./mas/Main.hs"
       component: "first-order-dpsynth:exe:mas"
 

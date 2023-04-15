@@ -52,6 +52,23 @@ spec apply allBitStrings inputs =
       0
       (allBitStrings (length $ head inputs))
 
+specCon ::
+  forall a.
+  (Num a, Ord a) =>
+  ([[a]] -> [Int] -> a) ->
+  (Int -> [[Int]]) ->
+  [[a]] ->
+  Either VerificationConditions a
+specCon apply allBitStrings inputs =
+  return $
+    foldl'
+      ( \acc v ->
+          let a = apply inputs v
+           in max a acc
+      )
+      0
+      (allBitStrings (length $ head inputs))
+
 safeSpec ::
   forall a e.
   (Num a, SOrd a, SimpleMergeable a, SafeLinearArith e a) =>

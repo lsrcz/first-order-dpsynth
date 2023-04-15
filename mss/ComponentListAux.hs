@@ -9,9 +9,11 @@ import Grisette
 import Component.CEGISAux 
 import Test.QuickCheck
 import Component.CEGISListAux (cegisListAuxQuickCheck, cegisListMiniQuickCheck)
-import Component (restrictedMssSpec)
+import Component
 import Control.Monad.Except
 import Component.Ops
+import Data.String
+import Data.Foldable
 
 mssComponentListAuxCProg :: CListAuxProg Integer Integer
 mssComponentListAuxCProg =
@@ -30,27 +32,30 @@ mssComponentListAuxCProg =
    4
    ]
 
-mssComponentListAuxProgSpec :: Num a => ListAuxProgSpec a
+mssComponentListAuxProgSpec :: (IsString a, Num a) => ListAuxProgSpec a
 mssComponentListAuxProgSpec =
   ListAuxProgSpec
-  [MiniProgSpec
-    [ComponentSpec (MLSOpConst "scanlCommLinear" 0) 1,
+  [{-MiniProgSpec
+    [ComponentSpec (MLSOpConst "scanlCommLinear" "x1") 1,
      ComponentSpec (MLSOp "max") 1,
      ComponentSpec (MLSOpConst "intConst" 0) 0,
-     ComponentSpec (MLSOpConst "binCommLinear" 2) 2
+     ComponentSpec (MLSOpConst "binCommLinear" "x3") 2
      ]
     1
-    3,
+    3,-}
    MiniProgSpec
-    [ComponentSpec (MLSOpConst "scanrCommLinear" 0) 1,
+    [ComponentSpec (MLSOpConst "scanrCommLinear" "y1") 1,
+     ComponentSpec (MLSOpConst "scanlCommLinear" "y2") 1,
      ComponentSpec (MLSOp "max") 1,
+     ComponentSpec (MLSOp "min") 1,
      ComponentSpec (MLSOpConst "intConst" 0) 0,
-     ComponentSpec (MLSOpConst "binCommLinear" 2) 2
+     ComponentSpec (MLSOpConst "binCommLinear" "y3") 2,
+     ComponentSpec (MLSOpConst "binCommLinear" "y4") 2
      ]
     1
     3]
 
-mssComponentListAuxProg :: forall a. (Num a) => ListAuxProg (SymIntN 5) a
+mssComponentListAuxProg :: forall a. (IsString a, Num a) => ListAuxProg (SymIntN 5) a
 mssComponentListAuxProg = genSymSimple (mssComponentListAuxProgSpec :: ListAuxProgSpec a) "prog"
 
 mpsSpec :: Num a => MiniProgSpec (MLOpCode a)
@@ -98,6 +103,18 @@ restrictedMpsSpec l = do
     go [] _ cur = mrgReturn cur
     go (x:xs) acc cur = go xs (acc + x) (symMax (acc + x) cur)
 
+restrictedMpsSpecCon ::
+  forall c.
+  (Show c, Num c, Ord c) =>
+  [[c]] ->
+  Either VerificationConditions c 
+restrictedMpsSpecCon l = do
+  traverse_ (\x -> when (x < -8 &&~ x > 8) $ throwError AssertionViolation) $ join l
+  go (head l) 0 0
+  where
+    go [] _ cur = return cur
+    go (x:xs) acc cur = go xs (acc + x) (max (acc + x) cur)
+
 componentListAuxMain :: String -> IO ()
 componentListAuxMain _ = do
   print $ interpretCListAuxProgOnConInputs [[1,3,-2,-3,5,7,-1,-8,4,3]] mssComponentListAuxCProg mlcfuncMap
@@ -109,7 +126,7 @@ componentListAuxMain _ = do
 
   Right (_, r :: CMiniProg (CMLOpCode (IntN 8)) (IntN 5)) <- cegisListMiniQuickCheck
     configb
-    restrictedMpsSpec
+    restrictedMpsSpecCon
     1
     (mssListAuxInputsGen (-8 , 8))
     4
@@ -123,7 +140,7 @@ componentListAuxMain _ = do
 
   Right (_, r :: CListAuxProg (IntN 5) (IntN 8)) <- cegisListAuxQuickCheck
     configb
-    restrictedMssSpec
+    restrictedMssSpecCon
     1
     (mssListAuxDInputsGen (-8 , 8))
     4

@@ -15,6 +15,7 @@ import Grisette
 import MSSSpec
 import qualified Data.ByteString as B
 import Test.QuickCheck
+import Data.Foldable
 
 mssComponentCProg :: Num a => CProg B.ByteString Integer a
 mssComponentCProg =
@@ -112,6 +113,15 @@ restrictedMssSpec ::
 restrictedMssSpec l = do
   mrgTraverse_ (\x -> symAssume $ x >=~ -8 &&~ x <=~ 8) $ join l
   spec apply allBitStrings l
+
+restrictedMssSpecCon ::
+  forall c.
+  (Show c, Num c, Ord c) =>
+  [[c]] ->
+  Either VerificationConditions c 
+restrictedMssSpecCon l = do
+  traverse_ (\x -> when (x < -8 &&~ x > 8) $ throwError AssertionViolation) $ join l
+  specCon apply allBitStrings l
 
 componentMain :: String -> IO ()
 componentMain _ = do
