@@ -1,18 +1,21 @@
 {-# LANGUAGE UndecidableInstances #-}
+
 module Component.ListOps where
 
 import Common.FuncMap
 import Common.ListProg
+import Common.T
+import Component.Ops
 import Control.Monad.Except
 import qualified Data.ByteString as B
 import qualified Data.HashMap.Strict as M
 import Data.List (foldl1')
+import Data.Maybe
 import GHC.Generics
 import Grisette
-import Data.Maybe
-import Component.Ops
+import Debug.Trace
 
-mlList2IntUnaryFunc ::
+listAuxList2IntUnaryFunc ::
   Mergeable si =>
   ( forall m.
     ( MonadError VerificationConditions m,
@@ -23,7 +26,7 @@ mlList2IntUnaryFunc ::
     m si
   ) ->
   Func (MListProgVal si)
-mlList2IntUnaryFunc f = Func 1 False $ \case
+listAuxList2IntUnaryFunc f = Func 1 False $ \case
   [a] -> do
     r <- liftToMonadUnion a
     case r of
@@ -31,8 +34,8 @@ mlList2IntUnaryFunc f = Func 1 False $ \case
       _ -> mrgThrowError AssertionViolation
   _ -> mrgThrowError AssertionViolation
 
-mlInt2IntUnaryFunc :: Mergeable si => (forall m. (MonadError VerificationConditions m, MonadUnion m) => si -> m si) -> Func (MListProgVal si)
-mlInt2IntUnaryFunc f = Func 1 False $ \case
+listAuxInt2IntUnaryFunc :: Mergeable si => (forall m. (MonadError VerificationConditions m, MonadUnion m) => si -> m si) -> Func (MListProgVal si)
+listAuxInt2IntUnaryFunc f = Func 1 False $ \case
   [a] -> do
     r <- liftToMonadUnion a
     case r of
@@ -40,8 +43,8 @@ mlInt2IntUnaryFunc f = Func 1 False $ \case
       _ -> mrgThrowError AssertionViolation
   _ -> mrgThrowError AssertionViolation
 
-mlList2ListUnaryFunc :: Mergeable si => (forall m. (MonadError VerificationConditions m, MonadUnion m, MonadFresh m) => [si] -> m [si]) -> Func (MListProgVal si)
-mlList2ListUnaryFunc f = Func 1 False $ \case
+listAuxList2ListUnaryFunc :: Mergeable si => (forall m. (MonadError VerificationConditions m, MonadUnion m, MonadFresh m) => [si] -> m [si]) -> Func (MListProgVal si)
+listAuxList2ListUnaryFunc f = Func 1 False $ \case
   [a] -> do
     r <- liftToMonadUnion a
     case r of
@@ -49,7 +52,7 @@ mlList2ListUnaryFunc f = Func 1 False $ \case
       _ -> mrgThrowError AssertionViolation
   _ -> mrgThrowError AssertionViolation
 
-mlIntInt2IntUnaryFunc ::
+listAuxIntInt2IntUnaryFunc ::
   Mergeable si =>
   Bool ->
   ( forall m.
@@ -62,7 +65,7 @@ mlIntInt2IntUnaryFunc ::
     m si
   ) ->
   Func (MListProgVal si)
-mlIntInt2IntUnaryFunc comm f = Func 2 comm $ \case
+listAuxIntInt2IntUnaryFunc comm f = Func 2 comm $ \case
   [v1, v2] -> do
     v1' <- liftToMonadUnion v1
     v2' <- liftToMonadUnion v2
@@ -71,7 +74,7 @@ mlIntInt2IntUnaryFunc comm f = Func 2 comm $ \case
       _ -> mrgThrowError AssertionViolation
   _ -> mrgThrowError AssertionViolation
 
-mlIntList2IntBinaryFunc ::
+listAuxIntList2IntBinaryFunc ::
   Mergeable si =>
   ( forall m.
     ( MonadError VerificationConditions m,
@@ -83,7 +86,7 @@ mlIntList2IntBinaryFunc ::
     m si
   ) ->
   Func (MListProgVal si)
-mlIntList2IntBinaryFunc f = Func 2 False $ \case
+listAuxIntList2IntBinaryFunc f = Func 2 False $ \case
   [v1, v2] -> do
     v1' <- liftToMonadUnion v1
     v2' <- liftToMonadUnion v2
@@ -92,7 +95,7 @@ mlIntList2IntBinaryFunc f = Func 2 False $ \case
       _ -> mrgThrowError AssertionViolation
   _ -> mrgThrowError AssertionViolation
 
-mlIntList2ListBinaryFunc ::
+listAuxIntList2ListBinaryFunc ::
   Mergeable si =>
   ( forall m.
     ( MonadError VerificationConditions m,
@@ -104,7 +107,7 @@ mlIntList2ListBinaryFunc ::
     m [si]
   ) ->
   Func (MListProgVal si)
-mlIntList2ListBinaryFunc f = Func 2 False $ \case
+listAuxIntList2ListBinaryFunc f = Func 2 False $ \case
   [v1, v2] -> do
     v1' <- liftToMonadUnion v1
     v2' <- liftToMonadUnion v2
@@ -113,7 +116,7 @@ mlIntList2ListBinaryFunc f = Func 2 False $ \case
       _ -> mrgThrowError AssertionViolation
   _ -> mrgThrowError AssertionViolation
 
-mlListList2ListBinaryFunc ::
+listAuxListList2ListBinaryFunc ::
   Mergeable si =>
   ( forall m.
     ( MonadError VerificationConditions m,
@@ -125,7 +128,7 @@ mlListList2ListBinaryFunc ::
     m [si]
   ) ->
   Func (MListProgVal si)
-mlListList2ListBinaryFunc f = Func 2 False $ \case
+listAuxListList2ListBinaryFunc f = Func 2 False $ \case
   [v1, v2] -> do
     v1' <- liftToMonadUnion v1
     v2' <- liftToMonadUnion v2
@@ -134,85 +137,82 @@ mlListList2ListBinaryFunc f = Func 2 False $ \case
       _ -> mrgThrowError AssertionViolation
   _ -> mrgThrowError AssertionViolation
 
-
-
-
 ---- CFunc ----
-mlList2IntUnaryCFunc ::
+listAuxList2IntUnaryCFunc ::
   ( [ci] ->
     Either VerificationConditions ci
   ) ->
   CFunc (CListProgVal ci)
-mlList2IntUnaryCFunc f = CFunc 1 False $ \case
+listAuxList2IntUnaryCFunc f = CFunc 1 False $ \case
   [a] -> do
     case a of
       CLIntList l -> CLInt <$> f l
       _ -> throwError AssertionViolation
   _ -> throwError AssertionViolation
 
-mlInt2IntUnaryCFunc :: (ci -> Either VerificationConditions ci) -> CFunc (CListProgVal ci)
-mlInt2IntUnaryCFunc f = CFunc 1 False $ \case
+listAuxInt2IntUnaryCFunc :: (ci -> Either VerificationConditions ci) -> CFunc (CListProgVal ci)
+listAuxInt2IntUnaryCFunc f = CFunc 1 False $ \case
   [a] -> do
     case a of
       CLInt v -> CLInt <$> f v
       _ -> throwError AssertionViolation
   _ -> throwError AssertionViolation
 
-mlList2ListUnaryCFunc :: ([ci] -> Either VerificationConditions [ci]) -> CFunc (CListProgVal ci)
-mlList2ListUnaryCFunc f = CFunc 1 False $ \case
+listAuxList2ListUnaryCFunc :: ([ci] -> Either VerificationConditions [ci]) -> CFunc (CListProgVal ci)
+listAuxList2ListUnaryCFunc f = CFunc 1 False $ \case
   [a] -> do
     case a of
       CLIntList v -> CLIntList <$> f v
       _ -> throwError AssertionViolation
   _ -> throwError AssertionViolation
 
-mlIntInt2IntUnaryCFunc ::
+listAuxIntInt2IntUnaryCFunc ::
   Bool ->
   ( ci ->
     ci ->
     Either VerificationConditions ci
   ) ->
   CFunc (CListProgVal ci)
-mlIntInt2IntUnaryCFunc comm f = CFunc 2 comm $ \case
+listAuxIntInt2IntUnaryCFunc comm f = CFunc 2 comm $ \case
   [v1, v2] -> do
     case (v1, v2) of
       (CLInt i1, CLInt i2) -> CLInt <$> f i1 i2
       _ -> throwError AssertionViolation
   _ -> throwError AssertionViolation
 
-mlIntList2IntBinaryCFunc ::
+listAuxIntList2IntBinaryCFunc ::
   ( ci ->
     [ci] ->
     Either VerificationConditions ci
   ) ->
   CFunc (CListProgVal ci)
-mlIntList2IntBinaryCFunc f = CFunc 2 False $ \case
+listAuxIntList2IntBinaryCFunc f = CFunc 2 False $ \case
   [v1, v2] -> do
     case (v1, v2) of
       (CLInt i1, CLIntList i2) -> CLInt <$> f i1 i2
       _ -> throwError AssertionViolation
   _ -> throwError AssertionViolation
 
-mlIntList2ListBinaryCFunc ::
+listAuxIntList2ListBinaryCFunc ::
   ( ci ->
     [ci] ->
     Either VerificationConditions [ci]
   ) ->
   CFunc (CListProgVal ci)
-mlIntList2ListBinaryCFunc f = CFunc 2 False $ \case
+listAuxIntList2ListBinaryCFunc f = CFunc 2 False $ \case
   [v1, v2] -> do
     case (v1, v2) of
       (CLInt i1, CLIntList i2) -> CLIntList <$> f i1 i2
       _ -> throwError AssertionViolation
   _ -> throwError AssertionViolation
 
-mlListList2ListBinaryCFunc ::
+listAuxListList2ListBinaryCFunc ::
   ( [ci] ->
     [ci] ->
     Either VerificationConditions [ci]
   ) ->
   CFunc (CListProgVal ci)
-mlListList2ListBinaryCFunc f = CFunc 2 False $ \case
+listAuxListList2ListBinaryCFunc f = CFunc 2 False $ \case
   [v1, v2] -> do
     case (v1, v2) of
       (CLIntList i1, CLIntList i2) -> CLIntList <$> f i1 i2
@@ -256,7 +256,7 @@ intToBoolFunction opc v =
             mrgReturn $ t + t + 1 ==~ v
         )
 
-intIntToIntCommLinearFunction ::
+intIntToIntComlistAuxinearFunction ::
   ( MonadError VerificationConditions m,
     MonadUnion m,
     MonadFresh m,
@@ -268,7 +268,7 @@ intIntToIntCommLinearFunction ::
   si ->
   si ->
   m si
-intIntToIntCommLinearFunction opc v1 v2 =
+intIntToIntComlistAuxinearFunction opc v1 v2 =
   mrgIf (opc ==~ 0) (mrgReturn $ v1 + v2) $
     mrgIf (opc ==~ 1) (mrgReturn $ symMin v1 v2) (mrgReturn $ symMax v1 v2)
 
@@ -280,10 +280,13 @@ intToBoolCFunction opc v =
     2 -> return $ even v
     _ -> return $ odd v
 
-intIntToIntCommLinearCFunction ::
-  (Ord ci, Num ci) => ci -> ci -> ci ->
+intIntToIntComlistAuxinearCFunction ::
+  (Ord ci, Num ci) =>
+  ci ->
+  ci ->
+  ci ->
   Either VerificationConditions ci
-intIntToIntCommLinearCFunction opc v1 v2 =
+intIntToIntComlistAuxinearCFunction opc v1 v2 =
   case opc of
     0 -> return $ v1 + v2
     1 -> return $ min v1 v2
@@ -363,10 +366,10 @@ filterFunc ::
   [si] ->
   m [si]
 filterFunc _ [] = mrgReturn []
-filterFunc opc (x:xs) = do
+filterFunc opc (x : xs) = do
   curr <- intToBoolFunction opc x
   remaining <- filterFunc opc xs
-  mrgIf curr (mrgReturn $ x:remaining) (mrgReturn remaining)
+  mrgIf curr (mrgReturn $ x : remaining) (mrgReturn remaining)
 
 zipFunc ::
   ( MonadError VerificationConditions m,
@@ -383,12 +386,12 @@ zipFunc ::
   m [si]
 zipFunc _ [] _ = mrgReturn []
 zipFunc _ _ [] = mrgReturn []
-zipFunc f (x:xs) (y:ys)= do
+zipFunc f (x : xs) (y : ys) = do
   curr <- f x y
   remaining <- zipFunc f xs ys
   mrgReturn $ curr : remaining
 
-zipCommLinearFunc ::
+zipComlistAuxinearFunc ::
   ( MonadError VerificationConditions m,
     MonadUnion m,
     MonadFresh m,
@@ -401,7 +404,7 @@ zipCommLinearFunc ::
   [si] ->
   [si] ->
   m [si]
-zipCommLinearFunc opc = zipFunc (intIntToIntCommLinearFunction opc)
+zipComlistAuxinearFunc opc = zipFunc (intIntToIntComlistAuxinearFunction opc)
 
 scanlFunc ::
   ( MonadError VerificationConditions m,
@@ -416,13 +419,13 @@ scanlFunc ::
   [si] ->
   m [si]
 scanlFunc _ [] = mrgReturn []
-scanlFunc f (x:xs) = go x xs
+scanlFunc f (x : xs) = go x xs
   where
     go acc [] = mrgReturn [acc]
-    go acc (y:ys) = do
+    go acc (y : ys) = do
       nextAcc <- f acc y
       rest <- go nextAcc ys
-      mrgReturn (acc:rest)
+      mrgReturn (acc : rest)
 
 scanrFunc ::
   ( MonadError VerificationConditions m,
@@ -448,13 +451,13 @@ scanlCFunc ::
   [ci] ->
   Either VerificationConditions [ci]
 scanlCFunc _ [] = return []
-scanlCFunc f (x:xs) = go x xs
+scanlCFunc f (x : xs) = go x xs
   where
     go acc [] = return [acc]
-    go acc (y:ys) = do
+    go acc (y : ys) = do
       nextAcc <- f acc y
       rest <- go nextAcc ys
-      return (acc:rest)
+      return (acc : rest)
 
 scanrCFunc ::
   ( Ord ci,
@@ -467,56 +470,57 @@ scanrCFunc f l = do
   r <- scanlCFunc (flip f) (reverse l)
   return $ reverse r
 
-newtype MLFuncMap a = 
-  MLFuncMap (M.HashMap B.ByteString (Either (Func (MListProgVal a)) (a -> Func (MListProgVal a))))
+newtype MLFuncMap a
+  = MLFuncMap (M.HashMap B.ByteString (Either (Func (MListProgVal a)) (a -> Func (MListProgVal a))))
 
-mlfuncMap :: (Num a, SOrd a, SimpleMergeable a, GenSymSimple () a) => MLFuncMap a
-mlfuncMap = MLFuncMap $
-  M.fromList
-    [ ( "intConst",
-        Right $ \x -> Func 0 False $ \case
-          [] -> mrgReturn $ mrgReturn $ LInt x
-          _ -> mrgThrowError AssertionViolation
-      ),
-      ( "binCommLinear",
-        Right $ \opc ->
-          mlIntInt2IntUnaryFunc True $ \l r -> intIntToIntCommLinearFunction opc l r
-      ),
-      ("binMinus", Left $ mlIntInt2IntUnaryFunc False $ \l r -> mrgReturn $ l - r),
-      ("binTimes", Left $ mlIntInt2IntUnaryFunc True $ \l r -> mrgReturn $ l * r),
-      ("sum", Left $ mlList2IntUnaryFunc $ mrgReturn . sum),
-      ("len", Left $ mlList2IntUnaryFunc $ mrgReturn . fromIntegral . length),
-      ("head", Left $ mlList2IntUnaryFunc $ mrgReturn . head),
-      ("last", Left $ mlList2IntUnaryFunc $ mrgReturn . last),
-      ("access", Left $ mlIntList2IntBinaryFunc access),
-      ( "count",
-        Right $ \opc -> mlList2IntUnaryFunc $ do
-          foldM
-            ( \acc va -> do
-                r <- intToBoolFunction opc va
-                mrgReturn $ mrgIte r (acc + 1) acc
-            )
-            0
-      ),
-      ("min", Left $ mlList2IntUnaryFunc $ mrgReturn . foldl1' symMin),
-      ("max", Left $ mlList2IntUnaryFunc $ mrgReturn . foldl1' symMax),
-      ("neg", Left $ mlInt2IntUnaryFunc $ mrgReturn . negate),
-      ("take", Left $ mlIntList2ListBinaryFunc takeFunc),
-      ("drop", Left $ mlIntList2ListBinaryFunc dropFunc),
-      ("reverse", Left $ mlList2ListUnaryFunc $ mrgReturn . reverse),
-      ("offset", Right $ \x -> mlList2ListUnaryFunc $ \l -> mrgReturn $ map (+x) l),
-      ("negateList", Left $ mlList2ListUnaryFunc $ \l -> mrgReturn $ map negate l),
-      ("filter", Right $ \opc -> mlList2ListUnaryFunc $ \l -> filterFunc opc l),
-      ("zipCommLinear", Right $ \opc -> mlListList2ListBinaryFunc $ zipFunc (intIntToIntCommLinearFunction opc)),
-      ("zipMinus", Left $ mlListList2ListBinaryFunc $ zipFunc $ \l r -> mrgReturn $ l - r),
-      ("zipTimes", Left $ mlListList2ListBinaryFunc $ zipFunc $ \l r -> mrgReturn $ l * r),
-      ("scanlCommLinear", Right $ \opc -> mlList2ListUnaryFunc $ scanlFunc (intIntToIntCommLinearFunction opc)),
-      ("scanlMinus", Left $ mlList2ListUnaryFunc $ scanlFunc (\l r -> mrgReturn $ l - r)),
-      ("scanlTimes", Left $ mlList2ListUnaryFunc $ scanlFunc (\l r -> mrgReturn $ l * r)),
-      ("scanrCommLinear", Right $ \opc -> mlList2ListUnaryFunc $ scanrFunc (intIntToIntCommLinearFunction opc)),
-      ("scanrMinus", Left $ mlList2ListUnaryFunc $ scanrFunc (\l r -> mrgReturn $ l - r)),
-      ("scanrTimes", Left $ mlList2ListUnaryFunc $ scanrFunc (\l r -> mrgReturn $ l * r))
-    ]
+listAuxfuncMap :: (Num a, SOrd a, SimpleMergeable a, GenSymSimple () a) => MLFuncMap a
+listAuxfuncMap =
+  MLFuncMap $
+    M.fromList
+      [ ( "intConst",
+          Right $ \x -> Func 0 False $ \case
+            [] -> mrgReturn $ mrgReturn $ LInt x
+            _ -> mrgThrowError AssertionViolation
+        ),
+        ( "binCommLinear",
+          Right $ \opc ->
+            listAuxIntInt2IntUnaryFunc True $ \l r -> intIntToIntComlistAuxinearFunction opc l r
+        ),
+        ("binMinus", Left $ listAuxIntInt2IntUnaryFunc False $ \l r -> mrgReturn $ l - r),
+        ("binTimes", Left $ listAuxIntInt2IntUnaryFunc True $ \l r -> mrgReturn $ l * r),
+        ("sum", Left $ listAuxList2IntUnaryFunc $ mrgReturn . sum),
+        ("len", Left $ listAuxList2IntUnaryFunc $ mrgReturn . fromIntegral . length),
+        ("head", Left $ listAuxList2IntUnaryFunc $ mrgReturn . head),
+        ("last", Left $ listAuxList2IntUnaryFunc $ mrgReturn . last),
+        ("access", Left $ listAuxIntList2IntBinaryFunc access),
+        ( "count",
+          Right $ \opc -> listAuxList2IntUnaryFunc $ do
+            foldM
+              ( \acc va -> do
+                  r <- intToBoolFunction opc va
+                  mrgReturn $ mrgIte r (acc + 1) acc
+              )
+              0
+        ),
+        ("min", Left $ listAuxList2IntUnaryFunc $ mrgReturn . foldl1' symMin),
+        ("max", Left $ listAuxList2IntUnaryFunc $ mrgReturn . foldl1' symMax),
+        ("neg", Left $ listAuxInt2IntUnaryFunc $ mrgReturn . negate),
+        ("take", Left $ listAuxIntList2ListBinaryFunc takeFunc),
+        ("drop", Left $ listAuxIntList2ListBinaryFunc dropFunc),
+        ("reverse", Left $ listAuxList2ListUnaryFunc $ mrgReturn . reverse),
+        ("offset", Right $ \x -> listAuxList2ListUnaryFunc $ \l -> mrgReturn $ map (+ x) l),
+        ("negateList", Left $ listAuxList2ListUnaryFunc $ \l -> mrgReturn $ map negate l),
+        ("filter", Right $ \opc -> listAuxList2ListUnaryFunc $ \l -> filterFunc opc l),
+        ("zipCommLinear", Right $ \opc -> listAuxListList2ListBinaryFunc $ zipFunc (intIntToIntComlistAuxinearFunction opc)),
+        ("zipMinus", Left $ listAuxListList2ListBinaryFunc $ zipFunc $ \l r -> mrgReturn $ l - r),
+        ("zipTimes", Left $ listAuxListList2ListBinaryFunc $ zipFunc $ \l r -> mrgReturn $ l * r),
+        ("scanlCommLinear", Right $ \opc -> listAuxList2ListUnaryFunc $ scanlFunc (intIntToIntComlistAuxinearFunction opc)),
+        ("scanlMinus", Left $ listAuxList2ListUnaryFunc $ scanlFunc (\l r -> mrgReturn $ l - r)),
+        ("scanlTimes", Left $ listAuxList2ListUnaryFunc $ scanlFunc (\l r -> mrgReturn $ l * r)),
+        ("scanrCommLinear", Right $ \opc -> listAuxList2ListUnaryFunc $ scanrFunc (intIntToIntComlistAuxinearFunction opc)),
+        ("scanrMinus", Left $ listAuxList2ListUnaryFunc $ scanrFunc (\l r -> mrgReturn $ l - r)),
+        ("scanrTimes", Left $ listAuxList2ListUnaryFunc $ scanrFunc (\l r -> mrgReturn $ l * r))
+      ]
 
 instance FuncMapLike (MLOpCode a) (MListProgVal a) (MLFuncMap a) where
   getFuncMaybe (MLSOp o) (MLFuncMap m) = do
@@ -531,68 +535,272 @@ instance FuncMapLike (MLOpCode a) (MListProgVal a) (MLFuncMap a) where
       Right f -> return $ f c
   getFunc o m = fromJust $ getFuncMaybe o m
 
-newtype MLCFuncMap a = 
-  MLCFuncMap (M.HashMap B.ByteString (Either (CFunc (CListProgVal a)) (a -> CFunc (CListProgVal a))))
+newtype MLCFuncMap a
+  = MLCFuncMap (M.HashMap B.ByteString (Either (CFunc (CListProgVal a)) (a -> CFunc (CListProgVal a))))
 
-mlcfuncMap :: (Num a, Ord a, Integral a) => MLCFuncMap a
-mlcfuncMap = MLCFuncMap $
-  M.fromList
-    [ ( "intConst",
-        Right $ \x -> CFunc 0 False $ \case
-          [] -> return $ CLInt x
-          _ -> throwError AssertionViolation
-      ),
-      ( "binCommLinear",
-        Right $ \opc ->
-          mlIntInt2IntUnaryCFunc True $ \l r -> intIntToIntCommLinearCFunction opc l r
-      ),
-      ("binMinus", Left $ mlIntInt2IntUnaryCFunc False $ \l r -> return $ l - r),
-      ("binTimes", Left $ mlIntInt2IntUnaryCFunc True $ \l r -> return $ l * r),
-      ("sum", Left $ mlList2IntUnaryCFunc $ return . sum),
-      ("len", Left $ mlList2IntUnaryCFunc $ return . fromIntegral . length),
-      ("head", Left $ mlList2IntUnaryCFunc $ return . head),
-      ("last", Left $ mlList2IntUnaryCFunc $ return . last),
-      ("access", Left $ mlIntList2IntBinaryCFunc (\i l -> return $ l !! fromIntegral i)),
-      ( "count",
-        Right $ \opc -> mlList2IntUnaryCFunc $ do
-          foldM
-            ( \acc va -> do
-                r <- intToBoolCFunction opc va
-                return $ if r then acc + 1 else acc
-            )
-            0
-      ),
-      ("min", Left $ mlList2IntUnaryCFunc $ return . foldl1' min),
-      ("max", Left $ mlList2IntUnaryCFunc $ return . foldl1' max),
-      ("neg", Left $ mlInt2IntUnaryCFunc $ return . negate),
-      ("take", Left $ mlIntList2ListBinaryCFunc $ \i l ->
-        if i < 0 || fromIntegral i >= length l then throwError AssertionViolation else
-        return $ take (fromIntegral i) l),
-      ("drop", Left $ mlIntList2ListBinaryCFunc $ \i l ->
-        if i < 0 || fromIntegral i >= length l then throwError AssertionViolation else
-        return $ drop (fromIntegral i) l),
-      ("reverse", Left $ mlList2ListUnaryCFunc $ return . reverse),
-      ("offset", Right $ \x -> mlList2ListUnaryCFunc $ \l -> return $ map (+x) l),
-      ("negateList", Left $ mlList2ListUnaryCFunc $ \l -> return $ map negate l),
-      ("filter", Right $ \opc -> mlList2ListUnaryCFunc $ \l -> filterM (intToBoolCFunction opc) l),
-      ("zipCommLinear", Right $ \opc -> mlListList2ListBinaryCFunc $ \l r -> traverse (uncurry $ intIntToIntCommLinearCFunction opc) $ zip l r),
-      ("zipMinus", Left $ mlListList2ListBinaryCFunc $ \l r -> traverse (\(l1, r1) -> return $ l1 - r1) $ zip l r),
-      ("zipTimes", Left $ mlListList2ListBinaryCFunc $ \l r -> traverse (\(l1, r1) -> return $ l1 * r1) $ zip l r),
-      ("scanlCommLinear", Right $ \opc -> mlList2ListUnaryCFunc $ scanlCFunc (intIntToIntCommLinearCFunction opc)),
-      ("scanlMinus", Left $ mlList2ListUnaryCFunc $ scanlCFunc (\l r -> return $ l - r)),
-      ("scanlTimes", Left $ mlList2ListUnaryCFunc $ scanlCFunc (\l r -> return $ l * r)),
-      ("scanrCommLinear", Right $ \opc -> mlList2ListUnaryCFunc $ scanrCFunc (intIntToIntCommLinearCFunction opc)),
-      ("scanrMinus", Left $ mlList2ListUnaryCFunc $ scanrCFunc (\l r -> return $ l - r)),
-      ("scanrTimes", Left $ mlList2ListUnaryCFunc $ scanrCFunc (\l r -> return $ l * r))
-    ]
+listAuxcfuncMap :: (Num a, Ord a, Integral a) => MLCFuncMap a
+listAuxcfuncMap =
+  MLCFuncMap $
+    M.fromList
+      [ ( "intConst",
+          Right $ \x -> CFunc 0 False $ \case
+            [] -> return $ CLInt x
+            _ -> throwError AssertionViolation
+        ),
+        ( "binCommLinear",
+          Right $ \opc ->
+            listAuxIntInt2IntUnaryCFunc True $ \l r -> intIntToIntComlistAuxinearCFunction opc l r
+        ),
+        ("binMinus", Left $ listAuxIntInt2IntUnaryCFunc False $ \l r -> return $ l - r),
+        ("binTimes", Left $ listAuxIntInt2IntUnaryCFunc True $ \l r -> return $ l * r),
+        ("sum", Left $ listAuxList2IntUnaryCFunc $ return . sum),
+        ("len", Left $ listAuxList2IntUnaryCFunc $ return . fromIntegral . length),
+        ("head", Left $ listAuxList2IntUnaryCFunc $ return . head),
+        ("last", Left $ listAuxList2IntUnaryCFunc $ return . last),
+        ("access", Left $ listAuxIntList2IntBinaryCFunc (\i l -> return $ l !! fromIntegral i)),
+        ( "count",
+          Right $ \opc -> listAuxList2IntUnaryCFunc $ do
+            foldM
+              ( \acc va -> do
+                  r <- intToBoolCFunction opc va
+                  return $ if r then acc + 1 else acc
+              )
+              0
+        ),
+        ("min", Left $ listAuxList2IntUnaryCFunc $ return . foldl1' min),
+        ("max", Left $ listAuxList2IntUnaryCFunc $ return . foldl1' max),
+        ("neg", Left $ listAuxInt2IntUnaryCFunc $ return . negate),
+        ( "take",
+          Left $ listAuxIntList2ListBinaryCFunc $ \i l ->
+            if i < 0 || fromIntegral i >= length l
+              then throwError AssertionViolation
+              else return $ take (fromIntegral i) l
+        ),
+        ( "drop",
+          Left $ listAuxIntList2ListBinaryCFunc $ \i l ->
+            if i < 0 || fromIntegral i >= length l
+              then throwError AssertionViolation
+              else return $ drop (fromIntegral i) l
+        ),
+        ("reverse", Left $ listAuxList2ListUnaryCFunc $ return . reverse),
+        ("offset", Right $ \x -> listAuxList2ListUnaryCFunc $ \l -> return $ map (+ x) l),
+        ("negateList", Left $ listAuxList2ListUnaryCFunc $ \l -> return $ map negate l),
+        ("filter", Right $ \opc -> listAuxList2ListUnaryCFunc $ \l -> filterM (intToBoolCFunction opc) l),
+        ("zipCommLinear", Right $ \opc -> listAuxListList2ListBinaryCFunc $ \l r -> traverse (uncurry $ intIntToIntComlistAuxinearCFunction opc) $ zip l r),
+        ("zipMinus", Left $ listAuxListList2ListBinaryCFunc $ \l r -> traverse (\(l1, r1) -> return $ l1 - r1) $ zip l r),
+        ("zipTimes", Left $ listAuxListList2ListBinaryCFunc $ \l r -> traverse (\(l1, r1) -> return $ l1 * r1) $ zip l r),
+        ("scanlCommLinear", Right $ \opc -> listAuxList2ListUnaryCFunc $ scanlCFunc (intIntToIntComlistAuxinearCFunction opc)),
+        ("scanlMinus", Left $ listAuxList2ListUnaryCFunc $ scanlCFunc (\l r -> return $ l - r)),
+        ("scanlTimes", Left $ listAuxList2ListUnaryCFunc $ scanlCFunc (\l r -> return $ l * r)),
+        ("scanrCommLinear", Right $ \opc -> listAuxList2ListUnaryCFunc $ scanrCFunc (intIntToIntComlistAuxinearCFunction opc)),
+        ("scanrMinus", Left $ listAuxList2ListUnaryCFunc $ scanrCFunc (\l r -> return $ l - r)),
+        ("scanrTimes", Left $ listAuxList2ListUnaryCFunc $ scanrCFunc (\l r -> return $ l * r))
+      ]
 
-instance CFuncMapLike (CMLOpCode a) (CListProgVal a) (MLCFuncMap a) where
+instance Show a => CFuncMapLike (CMLOpCode a) (CListProgVal a) (MLCFuncMap a) where
   getCFuncMaybe (CMLSOp o) (MLCFuncMap m) = do
     r <- M.lookup o m
     case r of
       Left fu -> return fu
       Right _ -> Nothing
   getCFuncMaybe (CMLSOpConst o c) (MLCFuncMap m) = do
+    r <- M.lookup o m
+    case r of
+      Left _ -> Nothing
+      Right f -> return $ f c
+  getCFunc o m = fromJust $ getCFuncMaybe o m
+
+newtype MLCombFuncMap a
+  = MLCombFuncMap (M.HashMap B.ByteString (Either (Func (MT a)) (a -> Func (MT a))))
+
+listCombUnaryFunc ::
+  Mergeable si =>
+  (T si -> Maybe a) ->
+  (b -> T si) ->
+  ( forall m.
+    ( MonadError VerificationConditions m,
+      MonadUnion m,
+      MonadFresh m
+    ) =>
+    a ->
+    m b
+  ) ->
+  Func (MT si)
+listCombUnaryFunc e1 c f = Func 1 False $ \case
+  [v1] -> do
+    v1' <- liftToMonadUnion v1
+    case e1 v1' of
+      Just i1 -> mrgFmap (mrgReturn . c) $ f i1
+      _ -> mrgThrowError AssertionViolation
+  _ -> mrgThrowError AssertionViolation
+
+listCombBinFunc ::
+  Mergeable si =>
+  (T si -> Maybe a) ->
+  (T si -> Maybe b) ->
+  (c -> T si) ->
+  Bool ->
+  ( forall m.
+    ( MonadError VerificationConditions m,
+      MonadUnion m,
+      MonadFresh m
+    ) =>
+    a ->
+    b ->
+    m c
+  ) ->
+  Func (MT si)
+listCombBinFunc e1 e2 c comm f = Func 2 comm $ \case
+  [v1, v2] -> do
+    v1' <- liftToMonadUnion v1
+    v2' <- liftToMonadUnion v2
+    case (e1 v1', e2 v2') of
+      (Just i1, Just i2) -> mrgFmap (mrgReturn . c) $ f i1 i2
+      _ -> mrgThrowError AssertionViolation
+  _ -> mrgThrowError AssertionViolation
+
+listCombTernaryFunc ::
+  Mergeable si =>
+  (T si -> Maybe a) ->
+  (T si -> Maybe b) ->
+  (T si -> Maybe c) ->
+  (d -> T si) ->
+  ( forall m.
+    ( MonadError VerificationConditions m,
+      MonadUnion m,
+      MonadFresh m
+    ) =>
+    a ->
+    b ->
+    c ->
+    m d
+  ) ->
+  Func (MT si)
+listCombTernaryFunc e1 e2 e3 c f = Func 2 False $ \case
+  [v1, v2, v3] -> do
+    v1' <- liftToMonadUnion v1
+    v2' <- liftToMonadUnion v2
+    v3' <- liftToMonadUnion v3
+    case (e1 v1', e2 v2', e3 v3') of
+      (Just i1, Just i2, Just i3) -> mrgFmap (mrgReturn . c) $ f i1 i2 i3
+      _ -> mrgThrowError AssertionViolation
+  _ -> mrgThrowError AssertionViolation
+
+listCombfuncMap :: (Num a, SOrd a, SimpleMergeable a, GenSymSimple () a) => MLCombFuncMap a
+listCombfuncMap =
+  MLCombFuncMap $
+    M.fromList
+      [ ( "intConst",
+          Right $ \x -> Func 0 False $ \case
+            [] -> mrgReturn $ mrgReturn $ TInt x
+            _ -> mrgThrowError AssertionViolation
+        ),
+        ("binPlus", Left $ listCombBinFunc extTInt extTInt TInt True $ \l r -> mrgReturn $ l + r),
+        ("binMinus", Left $ listCombBinFunc extTInt extTInt TInt False $ \l r -> mrgReturn $ l - r),
+        ("binTimes", Left $ listCombBinFunc extTInt extTInt TInt True $ \l r -> mrgReturn $ l * r),
+        ("ite", Left $ listCombTernaryFunc extTBool extTInt extTInt TInt $ \c l r -> mrgReturn $ mrgIte c l r),
+        ("not", Left $ listCombUnaryFunc extTBool TBool $ mrgReturn . nots),
+        ("and", Left $ listCombBinFunc extTBool extTBool TBool True $ \l r -> mrgReturn $ l &&~ r),
+        ("or", Left $ listCombBinFunc extTBool extTBool TBool True $ \l r -> mrgReturn $ l ||~ r),
+        ("leq", Left $ listCombBinFunc extTInt extTInt TBool False $ \l r -> mrgReturn $ l <=~ r),
+        ("eq", Left $ listCombBinFunc extTInt extTInt TBool False $ \l r -> mrgReturn $ l ==~ r),
+        ("max", Left $ listCombBinFunc extTInt extTInt TInt True $ \l r -> mrgReturn $ symMax l r),
+        ("min", Left $ listCombBinFunc extTInt extTInt TInt True $ \l r -> mrgReturn $ symMin l r)
+      ]
+
+instance FuncMapLike (MLOpCode a) (MT a) (MLCombFuncMap a) where
+  getFuncMaybe (MLSOp o) (MLCombFuncMap m) = do
+    r <- M.lookup o m
+    case r of
+      Left fu -> return fu
+      Right _ -> Nothing
+  getFuncMaybe (MLSOpConst o c) (MLCombFuncMap m) = do
+    r <- M.lookup o m
+    case r of
+      Left _ -> Nothing
+      Right f -> return $ f c
+  getFunc o m = fromJust $ getFuncMaybe o m
+
+newtype MLCombCFuncMap a
+  = MLCombCFuncMap (M.HashMap B.ByteString (Either (CFunc (CT a)) (a -> CFunc (CT a))))
+
+listCombUnaryCFunc ::
+  (CT si -> Maybe a) ->
+  (b -> CT si) ->
+  ( a ->
+    Either VerificationConditions b
+  ) ->
+  CFunc (CT si)
+listCombUnaryCFunc e1 c f = CFunc 1 False $ \case
+  [v1] -> do
+    case e1 v1 of
+      Just i1 -> c <$> f i1
+      _ -> throwError AssertionViolation
+  _ -> throwError AssertionViolation
+
+listCombBinCFunc ::
+  (CT si -> Maybe a) ->
+  (CT si -> Maybe b) ->
+  (c -> CT si) ->
+  Bool ->
+  (
+    a ->
+    b ->
+    Either VerificationConditions c
+  ) ->
+  CFunc (CT si)
+listCombBinCFunc e1 e2 c comm f = CFunc 2 comm $ \case
+  [v1, v2] -> do
+    case (e1 v1, e2 v2) of
+      (Just i1, Just i2) -> c <$> f i1 i2
+      _ -> throwError AssertionViolation
+  _ -> throwError AssertionViolation
+
+listCombTernaryCFunc ::
+  (CT si -> Maybe a) ->
+  (CT si -> Maybe b) ->
+  (CT si -> Maybe c) ->
+  (d -> CT si) ->
+  ( a ->
+    b ->
+    c ->
+    Either VerificationConditions d
+  ) ->
+  CFunc (CT si)
+listCombTernaryCFunc e1 e2 e3 c f = CFunc 2 False $ \case
+  [v1, v2, v3] -> do
+    case (e1 v1, e2 v2, e3 v3) of
+      (Just i1, Just i2, Just i3) -> c <$> f i1 i2 i3
+      _ -> throwError AssertionViolation
+  _ -> throwError AssertionViolation
+
+listCombcfuncMap :: (Num a, Ord a) => MLCombCFuncMap a
+listCombcfuncMap = MLCombCFuncMap $
+  M.fromList [
+    ("intConst", Right $ \x -> CFunc 0 False $ \case
+          [] -> return $ CInt x
+          _ -> throwError AssertionViolation
+      ),
+    ("binPlus", Left $ listCombBinCFunc extCTInt extCTInt CInt True $ \l r -> return $ l + r),
+    ("binMinus", Left $ listCombBinCFunc extCTInt extCTInt CInt False $ \l r -> return $ l - r),
+    ("binTimes", Left $ listCombBinCFunc extCTInt extCTInt CInt True $ \l r -> return $ l * r),
+    ("ite", Left $ listCombTernaryCFunc extCTBool extCTInt extCTInt CInt $ \c l r -> return $ if c then l else r),
+    ("not", Left $ listCombUnaryCFunc extCTBool CBool $ return . not),
+    ("and", Left $ listCombBinCFunc extCTBool extCTBool CBool True $ \l r -> return $ l && r),
+    ("or", Left $ listCombBinCFunc extCTBool extCTBool CBool True $ \l r -> return $ l || r),
+    ("leq", Left $ listCombBinCFunc extCTInt extCTInt CBool False $ \l r -> return $ l <= r),
+    ("eq", Left $ listCombBinCFunc extCTInt extCTInt CBool False $ \l r -> return $ l == r),
+    ("max", Left $ listCombBinCFunc extCTInt extCTInt CInt True $ \l r -> return $ max l r),
+    ("min", Left $ listCombBinCFunc extCTInt extCTInt CInt True $ \l r -> return $ min l r)
+  ]
+
+instance CFuncMapLike (CMLOpCode a) (CT a) (MLCombCFuncMap a) where
+  getCFuncMaybe (CMLSOp o) (MLCombCFuncMap m) = do
+    r <- M.lookup o m
+    case r of
+      Left fu -> return fu
+      Right _ -> Nothing
+  getCFuncMaybe (CMLSOpConst o c) (MLCombCFuncMap m) = do
     r <- M.lookup o m
     case r of
       Left _ -> Nothing

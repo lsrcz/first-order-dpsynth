@@ -70,11 +70,11 @@ newtype CListAuxProg val c = CListAuxProg [CMiniProg (CMLOpCode c) val]
 deriving via (Default (CListAuxProg cval c))
   instance (ToCon val cval, ToCon s c) => ToCon (ListAuxProg val s) (CListAuxProg cval c)
 
-interpretCListMiniProgOnConInputs :: CValLike cval =>
+interpretCListMiniProgOnConInputs :: (Show c, CValLike cval) =>
   [[c]] -> CMiniProg (CMLOpCode c) cval -> MLCFuncMap c -> Either VerificationConditions (CListProgVal c)
 interpretCListMiniProgOnConInputs inputs = interpretCMiniProgOnConInputs (CLIntList <$> inputs)
 
-interpretCListAuxProgOnConInputs :: forall c cval. CValLike cval =>
+interpretCListAuxProgOnConInputs :: forall c cval. (Show c, CValLike cval) =>
   [[c]] -> CListAuxProg cval c -> MLCFuncMap c -> Either VerificationConditions [c]
 interpretCListAuxProgOnConInputs inputs (CListAuxProg progs) fm = do
   t <- traverse (\p -> interpretCListMiniProgOnConInputs inputs p fm) progs

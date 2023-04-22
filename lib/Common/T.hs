@@ -17,6 +17,22 @@ data T si
   deriving (Show, Generic, Eq, Hashable)
   deriving (Mergeable, ToSym (CT ci), ExtractSymbolics, SEq, EvaluateSym) via (Default (T si))
 
+extCTBool :: CT si -> Maybe Bool
+extCTBool (CBool s) = Just s
+extCTBool _ = Nothing
+
+extCTInt :: CT si -> Maybe si
+extCTInt (CInt s) = Just s
+extCTInt _ = Nothing
+
+extTBool :: T si -> Maybe SymBool
+extTBool (TBool s) = Just s
+extTBool _ = Nothing
+
+extTInt :: T si -> Maybe si
+extTInt (TInt s) = Just s
+extTInt _ = Nothing
+
 deriving via (Default (T s2)) instance ToSym s1 s2 => ToSym (T s1) (T s2)
 deriving via (Default (T s2)) instance ToCon s1 s2 => ToCon (T s1) (T s2)
 

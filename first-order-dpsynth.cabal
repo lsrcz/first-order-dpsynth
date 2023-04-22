@@ -48,8 +48,10 @@ library
       Component.ConcreteProg
       Component.IntermediateVarSet
       Component.ListAuxProg
+      Component.ListCombProg
       Component.ListOps
       Component.ListProg
+      Component.ListQuickCheck
       Component.MiniProg
       Component.Ops
       Component.Prog
@@ -676,6 +678,7 @@ executable mss
   other-modules:
       Component
       ComponentAux
+      ComponentList
       ComponentListAux
       MSSSpec
       OOPSLA

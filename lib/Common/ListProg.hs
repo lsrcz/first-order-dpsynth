@@ -27,4 +27,11 @@ data ListProgVal si
 
 type MListProgVal si = UnionM (ListProgVal si)
 
+newtype ExactSize = ExactSize Int
 
+instance (Mergeable a, GenSymSimple () a) => GenSym ExactSize (ListProgVal a) where
+  fresh (ExactSize s) = do
+    b <- simpleFresh ()
+    i <- simpleFresh ()
+    il <- simpleFresh (SimpleListSpec s ())
+    chooseFresh [LBool b, LInt i, LIntList il]

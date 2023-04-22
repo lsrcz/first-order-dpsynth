@@ -3,7 +3,6 @@ import Component.ListAuxProg
 import Component.ConcreteMiniProg
 import Component.ListOps
 import Component.MiniProg
-import Component.CEGIS
 import Common.ListProg
 import Grisette
 import Component.CEGISAux 
@@ -117,8 +116,8 @@ restrictedMpsSpecCon l = do
 
 componentListAuxMain :: String -> IO ()
 componentListAuxMain _ = do
-  print $ interpretCListAuxProgOnConInputs [[1,3,-2,-3,5,7,-1,-8,4,3]] mssComponentListAuxCProg mlcfuncMap
-  print $ interpretCListAuxProgOnConInputs [[-1,-2,2]] mssComponentListAuxCProg mlcfuncMap
+  print $ interpretCListAuxProgOnConInputs [[1,3,-2,-3,5,7,-1,-8,4,3]] mssComponentListAuxCProg listAuxcfuncMap
+  print $ interpretCListAuxProgOnConInputs [[-1,-2,2]] mssComponentListAuxCProg listAuxcfuncMap
 
 
   let configb = precise boolector {Grisette.transcript = Just "b.smt2"}
@@ -131,8 +130,8 @@ componentListAuxMain _ = do
     (mssListAuxInputsGen (-8 , 8))
     4
     (mpsComponentListMiniProg :: MiniProg (MLOpCode (SymIntN 8)) (SymIntN 5))
-    mlfuncMap
-    mlcfuncMap
+    listAuxfuncMap
+    listAuxcfuncMap
     mssListIntermediateGen
   print r
 
@@ -145,7 +144,7 @@ componentListAuxMain _ = do
     (mssListAuxDInputsGen (-8 , 8))
     4
     (mssComponentListAuxProg :: ListAuxProg (SymIntN 5) (SymIntN 8))
-    mlfuncMap
-    mlcfuncMap
+    listAuxfuncMap
+    listAuxcfuncMap
     mssListIntermediateGen
   print r

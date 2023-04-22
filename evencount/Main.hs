@@ -4,8 +4,7 @@ import Component.ListOps
 import Component.ConcreteMiniProg
 import Component.MiniProg
 import Grisette
-import Control.Monad.Except
-import Component.CEGISListAux (cegisListAuxQuickCheck, cegisListMiniQuickCheck)
+import Component.CEGISListAux
 import Test.QuickCheck
 import Common.ListProg
 import Data.String
@@ -57,7 +56,7 @@ main = do
     (evenListAuxInputsGen (-8, 8))
     4
     (evencountComponentListAuxProg :: MiniProg (MLOpCode (SymIntN 8)) (SymIntN 5))
-    mlfuncMap
-    mlcfuncMap
+    listAuxfuncMap
+    listAuxcfuncMap
     evenListIntermediateGen
   print x
