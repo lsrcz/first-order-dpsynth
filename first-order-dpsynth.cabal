@@ -44,14 +44,15 @@ library
       Component.CEGISAux
       Component.CEGISList
       Component.CEGISListAux
+      Component.CEGISListComb2
       Component.ConcreteMiniProg
       Component.ConcreteProg
       Component.IntermediateVarSet
       Component.ListAuxProg
+      Component.ListComb2Prog
       Component.ListCombProg
       Component.ListOps
       Component.ListProg
-      Component.ListQuickCheck
       Component.MiniProg
       Component.Ops
       Component.Prog
@@ -123,6 +124,7 @@ executable 2ndmin
   other-modules:
       Component
       ComponentAux
+      ComponentList
       RYOOPSLA
       SecondMinSpec
       Paths_first_order_dpsynth

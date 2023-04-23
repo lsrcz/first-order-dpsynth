@@ -16,6 +16,7 @@ import Component.ListOps
 import Common.ListProg
 import Component.ListProg
 import Common.T
+import Data.Either
 
 
 cegisListQuickCheck ::
@@ -24,6 +25,7 @@ cegisListQuickCheck ::
   ToCon val cval, ExtractSymbolics a, EvaluateSym a, Mergeable a, SEq a, Show a, ToSym a a, ToCon a a, Read c, Show val) =>
   GrisetteSMTConfig n ->
   ([[c]] -> Either VerificationConditions c) ->
+  Int ->
   Int ->
   Gen [[c]] ->
   Int ->
@@ -35,7 +37,7 @@ cegisListQuickCheck ::
   (Int -> M (MListProgVal a)) ->
   M (MT a) ->
   IO (Either SolvingFailure ([[[c]]], CListProg cval c))
-cegisListQuickCheck config spec numInputs inputGen maxGenSize prog funcMap cfuncMap combFuncMap ccombFuncMap gen combGen = SBV.runSMTWith (sbvConfig config) {transcript = Just "guess.smt2"} $ do
+cegisListQuickCheck config spec numPrev numInputs inputGen maxGenSize prog funcMap cfuncMap combFuncMap ccombFuncMap gen combGen = SBV.runSMTWith (sbvConfig config) {transcript = Just "guess.smt2"} $ do
   let SymBool t = wellFormed
   (newm, a) <- lowerSinglePrim config t
   SBVC.query $
@@ -47,7 +49,7 @@ cegisListQuickCheck config spec numInputs inputGen maxGenSize prog funcMap cfunc
           md <- SBVC.getModel
           return $ Right $ parseModel config md newm
         _ -> return $ Left $ sbvCheckSatResult r
-      loop 1 mr 2 [] newm
+      loop 1 mr (numPrev + 1) [] newm
   where
     -- forallSymbols :: SymbolSet
     -- forallSymbols = extractSymbolics inputs
@@ -61,16 +63,20 @@ cegisListQuickCheck config spec numInputs inputGen maxGenSize prog funcMap cfunc
         Left _ -> con False
         Right _ -> con True
 
-    f :: Int -> [[a]] -> a -> (ExceptT VerificationConditions UnionM a, IntermediateVarSet)
+    f :: Int -> [[a]] -> [a] -> (ExceptT VerificationConditions UnionM a, IntermediateVarSet)
     f idx input prevRes = first ExceptT $ simpleMerge $ fmap (first mrgReturn) $ runWriterT $
       runExceptT $ runFreshT (interpretListProg input prevRes prog funcMap combFuncMap gen combGen) (FreshIdentWithInfo "x" idx)
 
-    phiIO :: Int -> [[a]] -> a -> a -> SymBool
+    phiIO :: Int -> [[a]] -> [a] -> a -> SymBool
     phiIO idx i prevo o = simpleMerge $ do
       x <- runExceptT $ fst $ f idx i prevo
       return $ x ==~ Right o
 
-    check :: Int -> Model -> IO (Either SolvingFailure ([[c]], Int, c, c))
+    
+    inits l numInits | numInits /= 0 = inits (fmap init l) (numInits - 1) ++ [fmap init l]
+    inits _ _ = []
+
+    check :: Int -> Model -> IO (Either SolvingFailure ([[c]], Int, [c], c))
     check i _ | i > maxGenSize = return (Left Unsat)
     check i candidate = do
       let evaluated :: CListProg cval c = evaluateSymToCon candidate prog
@@ -78,22 +84,34 @@ cegisListQuickCheck config spec numInputs inputGen maxGenSize prog funcMap cfunc
         quickCheckWithResult
           (stdArgs {maxSize = i, maxSuccess = 1000, chatty = False})
           ( forAll (resize i inputGen) $ \input ->
-              let prevp = case spec (fmap init input) of Right v -> v; _ -> error "Bad"
-                  p = interpretCListProgOnConInputs input prevp evaluated cfuncMap ccombFuncMap :: Either VerificationConditions c
+              let 
+                  prevp = traverse spec $ inits input numPrev 
+                  -- p = interpretCListProgOnConInputs input prevp evaluated cfuncMap ccombFuncMap :: Either VerificationConditions c
                   sp = spec input
-               in case (p, sp) of
+               in case (prevp, sp) of
+                    (Right rprevp, Right rsp) -> 
+                      let
+                        p = interpretCListProgOnConInputs input rprevp evaluated cfuncMap ccombFuncMap :: Either VerificationConditions c
+                       in
+                        case p of
+                          Right v -> v == rsp
+                          Left _ -> False
+                    _ -> True
+                          {-
+                case (p, sp) of
                     (Right v, Right sv) -> v == sv
                     _ -> error "Bad"
+                    -}
           )
       case r of
         Success {} -> check (i + 1) candidate
         Failure _ _ _ _ _ _ _ _ _ _ res _ _ -> do
           let input = read (head res) :: [[c]]
           -- let input = toSym $ unGen inputGen curSeed i
-          case (spec (fmap init input), spec input) of
+          case (traverse spec (inits input numPrev), spec input) of
             (Right prevv, Right v) -> return $ Right (input, i, prevv, v)
+            (Left _, _) -> error "Should not happen" -- check (i + 1) candidate
             (_, Left AssumptionViolation) -> check (i + 1) candidate
-            (Left AssumptionViolation, _) -> check (i + 1) candidate
             _ -> error "Should not happen"
 
 {-
@@ -101,7 +119,7 @@ cegisListQuickCheck config spec numInputs inputGen maxGenSize prog funcMap cfunc
           -}
         _ -> error "???"
 
-    guess :: Int -> [[c]] -> c -> c -> SymBiMap -> SBVC.Query (SymBiMap, Either SolvingFailure Model)
+    guess :: Int -> [[c]] -> [c] -> c -> SymBiMap -> SBVC.Query (SymBiMap, Either SolvingFailure Model)
     guess idx candidatei candidateprevo candidateo origm = do
       liftIO $ print candidatei
       liftIO $ print candidateprevo
@@ -116,7 +134,7 @@ cegisListQuickCheck config spec numInputs inputGen maxGenSize prog funcMap cfunc
           let model = parseModel config md newm
           liftIO $ print (evaluateSymToCon model prog :: CListProg cval c)
           liftIO $ print (evaluateSym False model e)
-          liftIO $ print (interpretCListProgOnConInputs candidatei candidateprevo (evaluateSymToCon model prog :: CListProg cval c) listAuxcfuncMap listCombcfuncMap)
+          liftIO $ print (interpretCListProgOnConInputs candidatei candidateprevo (evaluateSymToCon model prog :: CListProg cval c) cfuncMap ccombFuncMap)
           return (newm, Right model)
         _ -> return (newm, Left $ sbvCheckSatResult r)
     loop ::
@@ -146,6 +164,7 @@ cegisListQuickCheck1 ::
   GrisetteSMTConfig n ->
   ([[c]] -> Either VerificationConditions c) ->
   Int ->
+  Int ->
   Gen [[c]] ->
   Int ->
   ListProg val a ->
@@ -156,6 +175,6 @@ cegisListQuickCheck1 ::
   (Int -> M (MListProgVal a)) ->
   M (MT a) ->-}
   IO (Either SolvingFailure ([[[c]]], CListProg cval c))
-cegisListQuickCheck1 config spec numInputs inputGen maxGenSize prog =
-  cegisListQuickCheck config spec numInputs inputGen maxGenSize prog
+cegisListQuickCheck1 config spec numPrev numInputs inputGen maxGenSize prog =
+  cegisListQuickCheck config spec numPrev numInputs inputGen maxGenSize prog
     listAuxfuncMap listAuxcfuncMap listCombfuncMap listCombcfuncMap (fresh . ExactSize) (fresh ())

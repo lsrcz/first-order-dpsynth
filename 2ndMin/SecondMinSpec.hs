@@ -3,9 +3,15 @@ module SecondMinSpec where
 import Control.Monad.Except
 import Data.Foldable
 import Grisette
+import GHC.Stack
 import Data.List
 
-secondMin :: Ord a => [a] -> a
+secondMinInf :: (HasCallStack, Ord a) => a -> [a] -> a
+secondMinInf inf [] = inf
+secondMinInf inf [_] = inf
+secondMinInf _ l = (!!1) . sort $ l
+
+secondMin :: (HasCallStack, Ord a) => [a] -> a
 secondMin = (!!1) . sort
 
 minSpecV :: [[SymInteger]] -> SymInteger -> ExceptT VerificationConditions UnionM SymBool
