@@ -502,8 +502,8 @@ listAuxfuncMap =
               )
               0
         ),
-        ("min", Left $ listAuxList2IntUnaryFunc $ mrgReturn . foldl1' symMin),
-        ("max", Left $ listAuxList2IntUnaryFunc $ mrgReturn . foldl1' symMax),
+        ("min", Right $ \inf -> listAuxList2IntUnaryFunc $ mrgReturn . foldl' symMin inf),
+        ("max", Left $ \ninf -> listAuxList2IntUnaryFunc $ mrgReturn . foldl' symMax ninf),
         ("neg", Left $ listAuxInt2IntUnaryFunc $ mrgReturn . negate),
         ("take", Left $ listAuxIntList2ListBinaryFunc takeFunc),
         ("drop", Left $ listAuxIntList2ListBinaryFunc dropFunc),
@@ -567,8 +567,8 @@ listAuxcfuncMap =
               )
               0
         ),
-        ("min", Left $ listAuxList2IntUnaryCFunc $ return . foldl1' min),
-        ("max", Left $ listAuxList2IntUnaryCFunc $ return . foldl1' max),
+        ("min", Right $ \inf -> listAuxList2IntUnaryCFunc $ return . foldl' min inf),
+        ("max", Right $ \ninf -> listAuxList2IntUnaryCFunc $ return . foldl1 max ninf),
         ("neg", Left $ listAuxInt2IntUnaryCFunc $ return . negate),
         ( "take",
           Left $ listAuxIntList2ListBinaryCFunc $ \i l ->
