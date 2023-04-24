@@ -9,7 +9,7 @@ import Component.Ops
 import Control.Monad.Except
 import qualified Data.ByteString as B
 import qualified Data.HashMap.Strict as M
-import Data.List (foldl1')
+import Data.List
 import Data.Maybe
 import GHC.Generics
 import Grisette
@@ -503,7 +503,7 @@ listAuxfuncMap =
               0
         ),
         ("min", Right $ \inf -> listAuxList2IntUnaryFunc $ mrgReturn . foldl' symMin inf),
-        ("max", Left $ \ninf -> listAuxList2IntUnaryFunc $ mrgReturn . foldl' symMax ninf),
+        ("max", Right $ \ninf -> listAuxList2IntUnaryFunc $ mrgReturn . foldl' symMax ninf),
         ("neg", Left $ listAuxInt2IntUnaryFunc $ mrgReturn . negate),
         ("take", Left $ listAuxIntList2ListBinaryFunc takeFunc),
         ("drop", Left $ listAuxIntList2ListBinaryFunc dropFunc),
@@ -568,7 +568,7 @@ listAuxcfuncMap =
               0
         ),
         ("min", Right $ \inf -> listAuxList2IntUnaryCFunc $ return . foldl' min inf),
-        ("max", Right $ \ninf -> listAuxList2IntUnaryCFunc $ return . foldl1 max ninf),
+        ("max", Right $ \ninf -> listAuxList2IntUnaryCFunc $ return . foldl' max ninf),
         ("neg", Left $ listAuxInt2IntUnaryCFunc $ return . negate),
         ( "take",
           Left $ listAuxIntList2ListBinaryCFunc $ \i l ->

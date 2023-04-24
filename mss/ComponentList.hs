@@ -25,7 +25,7 @@ mssComponentListCAuxProg =
   CListAuxProg
     [ CMiniProg
         [ CNode (CMLSOpConst "scanrCommLinear" 0) 1 [0],
-          CNode (CMLSOp "max") 2 [1],
+          CNode (CMLSOpConst "max" $ -8) 2 [1],
           CNode (CMLSOpConst "intConst" 0) 3 [],
           CNode (CMLSOpConst "binCommLinear" 2) 4 [2, 3]
         ]
@@ -64,11 +64,11 @@ mssComponentListProgSpec =
     ( ListAuxProgSpec
         [ MiniProgSpec
             [ ComponentSpec (MLSOpConst "scanrCommLinear" "y1") 1,
-              ComponentSpec (MLSOpConst "scanlCommLinear" "y2") 1,
-              ComponentSpec (MLSOp "max") 1,
-              ComponentSpec (MLSOp "min") 1,
+              -- ComponentSpec (MLSOpConst "scanlCommLinear" "y2") 1,
+              ComponentSpec (MLSOpConst "max" $ -8) 1,
+              -- ComponentSpec (MLSOpConst "min" $ -8) 1,
               ComponentSpec (MLSOpConst "intConst" 0) 0,
-              ComponentSpec (MLSOpConst "binCommLinear" "y3") 2,
+              -- ComponentSpec (MLSOpConst "binCommLinear" "y3") 2,
               ComponentSpec (MLSOpConst "binCommLinear" "y4") 2
             ]
             1
@@ -78,7 +78,7 @@ mssComponentListProgSpec =
     ( ListCombProgSpec
         ( MiniProgSpec
             [ ComponentSpec (MLSOp "binPlus") 2,
-              ComponentSpec (MLSOp "binMinus") 2,
+              -- ComponentSpec (MLSOp "binMinus") 2,
               ComponentSpec (MLSOp "leq") 2,
               ComponentSpec (MLSOp "ite") 3
               --ComponentSpec (MLSOp "max") 2,
@@ -129,8 +129,8 @@ mssInputsGen e = do
 
 componentListMain :: String -> IO ()
 componentListMain _ = do
-  let configb = precise boolector {Grisette.transcript = Just "b.smt2"}
-  --qcListProg1 1 17 8 4 mssAlgo mssComponentListCProg
+  let configb = precise z3 {Grisette.transcript = Just "b.smt2"}
+  qcListProg1 1 17 8 0 4 mssAlgo mssComponentListCProg
   --print $ interpretCListProgOnConInputs [[1, 3, -2, -3, 5, 7, -1, -8, 4, 6]] [12] mssComponentListCProg listAuxcfuncMap listCombcfuncMap
   --qcListComb2AgainstListAux 17 8 4 mssComponentListCAuxProg mssComponentListCComb2Prog
 
@@ -145,7 +145,7 @@ componentListMain _ = do
     (mssComponentListProg :: ListProg (SymIntN 5) (SymIntN 8))
   print prog
 
-  qcListProg1 1 17 8 4 mssAlgo prog
+  qcListProg1 1 17 8 0 4 mssAlgo prog
 
   Right (_, r :: CListComb2Prog (IntN 5) (IntN 8)) <- cegisListComb2QuickCheck
     configb

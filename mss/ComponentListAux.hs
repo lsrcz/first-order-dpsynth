@@ -137,6 +137,7 @@ componentListAuxMain _ = do
 
     
 
+{-
   Right (_, r :: CListAuxProg (IntN 5) (IntN 8)) <- cegisListAuxQuickCheck
     configb
     restrictedMssSpecCon
@@ -148,3 +149,4 @@ componentListAuxMain _ = do
     listAuxcfuncMap
     mssListIntermediateGen
   print r
+-}

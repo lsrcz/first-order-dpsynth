@@ -127,3 +127,8 @@ executables:
     source-dirs: evencount
     main: Main.hs
     dependencies: first-order-dpsynth
+
+  longest-even-zero:
+    source-dirs: longest-even-zero
+    main: Main.hs
+    dependencies: first-order-dpsynth

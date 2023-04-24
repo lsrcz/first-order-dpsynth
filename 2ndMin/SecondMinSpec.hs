@@ -42,3 +42,13 @@ minSpec inputs = do
         tle = map (\x -> mrgIte (x <=~ v :: SymBool) (1 :: SymInteger) 0) t
         numl = foldl' (+) 0 tl
         numle = foldl' (+) 0 tle
+
+restrictedSecondMinSpecCon ::
+  forall c.
+  (Show c, Num c, Ord c) =>
+  c ->
+  [[c]] ->
+  Either VerificationConditions c
+restrictedSecondMinSpecCon inf l = do
+  traverse_ (\x -> when (x < -8 &&~ x > 8) $ throwError AssertionViolation) $ join l
+  return $ secondMinInf inf $ join l

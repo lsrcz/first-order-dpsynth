@@ -95,7 +95,7 @@ qcListProg1 numPrev m off minLen maxLen algo p =
               ( interpretCListProgOnConInputs [fromInteger <$> l] (fromInteger . algo <$> inits l numPrev) p listAuxcfuncMap listCombcfuncMap :: Either VerificationConditions c
               )
             rightResult = Right $ fromInteger $ algo l
-         in (length l <= 1 || length l < fromInteger minLen || (leftResult == rightResult) || trace (show l) (trace (show leftResult) (trace (show rightResult) False))))
+         in (length l < fromInteger numPrev || length l < fromInteger minLen || (leftResult == rightResult) || trace (show l) (trace (show leftResult) (trace (show rightResult) False))))
     where
       inits l numInits | numInits /= 0 = inits (init l) (numInits - 1) ++ [init l]
       inits _ _ = []
